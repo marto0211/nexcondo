@@ -1,0 +1,24 @@
+[build]
+  publish = "."
+
+# index.html — NUNCA fazer cache (sempre busca a versão mais nova)
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+    Expires = "0"
+
+# Outros arquivos — cache curto
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+
+# Redirecionar tudo para index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
