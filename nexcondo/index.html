@@ -9,161 +9,267 @@
 <meta name="apple-mobile-web-app-title" content="NexCondo">
 <title>NexCondo — Gestão Condominial</title>
 <style>
-/* ===== RESET & BASE ===== */
+/* ===== RESET ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ===== TOKENS ===== */
 :root {
-  --blue:    #2d2d6e;
-  --blue2:   #378ADD;
-  --green:   #0F6E56;
-  --amber:   #854F0B;
-  --coral:   #993C1D;
-  --purple:  #534AB7;
-  --red:     #A32D2D;
-  --bg:      #f4f4f8;
-  --surface: #ffffff;
-  --surface2:#f8f8fc;
-  --border:  #e2e2ec;
-  --text:    #1a1a2e;
-  --text2:   #555570;
-  --text3:   #9090aa;
-  --success: #27500A;
-  --success-bg: #EAF3DE;
-  --warning: #633806;
-  --warning-bg: #FAEEDA;
-  --danger:  #791F1F;
-  --danger-bg: #FCEBEB;
-  --accent:  #185FA5;
-  --accent-bg: #E6F1FB;
-  --radius:  10px;
-  --sidebar-w: 240px;
+  /* Brand */
+  --brand:       #4F46E5;
+  --brand-dark:  #3730A3;
+  --brand-light: #EEF2FF;
+  --brand-text:  #3730A3;
+
+  /* Surfaces */
+  --bg:          #F5F5F7;
+  --surface:     #FFFFFF;
+  --surface2:    #FAFAFA;
+
+  /* Text */
+  --text:        #111827;
+  --text2:       #374151;
+  --text3:       #6B7280;
+  --text4:       #9CA3AF;
+
+  /* Border */
+  --border:      #E5E7EB;
+  --border2:     #D1D5DB;
+
+  /* Semantic */
+  --success:     #059669;
+  --success-bg:  #ECFDF5;
+  --success-b:   #A7F3D0;
+  --warning:     #D97706;
+  --warning-bg:  #FFFBEB;
+  --warning-b:   #FCD34D;
+  --danger:      #DC2626;
+  --danger-bg:   #FEF2F2;
+  --danger-b:    #FECACA;
+  --info:        #2563EB;
+  --info-bg:     #EFF6FF;
+  --info-b:      #BFDBFE;
+
+  /* Layout */
+  --radius:      8px;
+  --radius-lg:   14px;
+  --sidebar-w:   252px;
+  --topbar-h:    60px;
 }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
+  background: var(--bg); color: var(--text);
+  font-size: 14px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
 .hidden { display: none !important; }
 button { cursor: pointer; font-family: inherit; }
-input, select, textarea { font-family: inherit; font-size: 14px; }
-a { color: var(--accent); text-decoration: none; }
+input, select, textarea { font-family: inherit; }
+a { color: var(--brand); text-decoration: none; }
 
 /* ===== LOGIN ===== */
 .login-screen {
-  min-height: 100vh; display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #1a1a2e 0%, #2d2d6e 50%, #534AB7 100%);
+  min-height: 100vh; display: flex;
+  background: #0F0F23;
   padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.login-screen::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 20% 50%, rgba(79,70,229,.25) 0%, transparent 60%),
+              radial-gradient(ellipse 60% 80% at 80% 20%, rgba(16,185,129,.12) 0%, transparent 50%);
+}
+.login-left {
+  flex: 1; display: flex; flex-direction: column; justify-content: center;
+  padding: 60px; position: relative; z-index: 1;
+  max-width: 560px;
+}
+.login-brand {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 60px;
+}
+.login-brand-icon {
+  width: 44px; height: 44px; background: var(--brand); border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0;
+}
+.login-brand-name {
+  font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -.02em;
+}
+.login-tagline {
+  font-size: 40px; font-weight: 700; color: #fff; line-height: 1.15;
+  letter-spacing: -.02em; margin-bottom: 20px;
+}
+.login-tagline span { color: #818CF8; }
+.login-desc {
+  font-size: 16px; color: rgba(255,255,255,.55); line-height: 1.7; margin-bottom: 40px;
+}
+.login-features {
+  display: flex; flex-direction: column; gap: 12px;
+}
+.login-feature {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 14px; color: rgba(255,255,255,.7);
+}
+.login-feature-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #818CF8; flex-shrink: 0;
+}
+.login-right {
+  display: flex; align-items: center; justify-content: center;
+  flex: 0 0 440px; position: relative; z-index: 1;
 }
 .login-box {
-  background: var(--surface); border-radius: 20px; padding: 40px 32px;
-  width: 100%; max-width: 380px;
+  background: #fff; border-radius: 20px; padding: 44px 40px;
+  width: 100%; box-shadow: 0 24px 48px rgba(0,0,0,.2);
 }
-.login-logo { text-align: center; margin-bottom: 32px; }
-.login-icon { font-size: 48px; margin-bottom: 8px; }
-.login-logo h1 { font-size: 24px; font-weight: 700; color: var(--blue); }
-.login-logo p { font-size: 13px; color: var(--text3); margin-top: 4px; }
-.form-group { margin-bottom: 16px; }
-.form-group label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
-.form-group input {
-  width: 100%; padding: 11px 14px; border: 1.5px solid var(--border);
+.login-box-logo {
+  text-align: center; margin-bottom: 32px;
+}
+.login-box-icon {
+  width: 60px; height: 60px; background: var(--brand-light); border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; margin: 0 auto 12px;
+}
+.login-box-title {
+  font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 4px;
+}
+.login-box-sub { font-size: 13px; color: var(--text3); }
+.login-label { font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; display: block; }
+.login-input {
+  width: 100%; padding: 12px 14px; border: 1.5px solid var(--border);
   border-radius: var(--radius); background: var(--bg); color: var(--text);
-  transition: border-color .15s;
+  font-size: 15px; transition: border-color .15s; outline: none;
 }
-.form-group input:focus { outline: none; border-color: var(--blue2); }
-.btn-primary {
-  width: 100%; padding: 13px; background: var(--blue); color: #fff;
+.login-input:focus { border-color: var(--brand); }
+.login-submit {
+  width: 100%; padding: 13px; background: var(--brand); color: #fff;
   border: none; border-radius: var(--radius); font-size: 15px; font-weight: 600;
-  margin-top: 8px; transition: background .15s;
+  margin-top: 6px; transition: all .15s; letter-spacing: -.01em;
 }
-.btn-primary:hover { background: #3a3a8e; }
-.login-links { text-align: center; margin-top: 16px; font-size: 12px; color: var(--text3); display: flex; gap: 8px; justify-content: center; }
+.login-submit:hover { background: var(--brand-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79,70,229,.3); }
+.login-submit:active { transform: translateY(0); }
+.login-import { text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
+.login-links { text-align: center; margin-top: 14px; font-size: 12px; color: var(--text3); }
+
+@media (max-width: 900px) {
+  .login-left { display: none; }
+  .login-right { flex: 1; }
+  .login-screen { justify-content: center; }
+}
+@media (max-width: 480px) {
+  .login-box { padding: 32px 24px; border-radius: 16px; }
+}
 
 /* ===== APP SHELL ===== */
 .app { display: flex; height: 100vh; overflow: hidden; }
 
 /* ===== SIDEBAR ===== */
 .sidebar {
-  width: var(--sidebar-w); background: var(--surface);
-  border-right: 1px solid var(--border); display: flex; flex-direction: column;
+  width: var(--sidebar-w); background: #111827;
+  display: flex; flex-direction: column;
   flex-shrink: 0; transition: transform .25s; z-index: 100;
 }
 .sidebar-logo {
   display: flex; align-items: center; gap: 10px;
-  padding: 20px 16px 16px; border-bottom: 1px solid var(--border);
+  padding: 18px 16px; border-bottom: 1px solid rgba(255,255,255,.07);
 }
-.sidebar-logo-icon { font-size: 28px; }
-.sidebar-name { font-size: 15px; font-weight: 700; color: var(--blue); }
-.sidebar-condo { font-size: 11px; color: var(--text3); }
-.sidebar-nav { flex: 1; padding: 12px 8px; overflow-y: auto; }
-.nav-section { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: .08em; text-transform: uppercase; padding: 12px 8px 6px; }
+.sidebar-logo-icon {
+  width: 36px; height: 36px; background: var(--brand); border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.sidebar-name { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: -.01em; }
+.sidebar-condo { font-size: 11px; color: rgba(255,255,255,.4); margin-top: 1px; }
+.sidebar-nav { flex: 1; padding: 10px 8px; overflow-y: auto; scrollbar-width: none; }
+.sidebar-nav::-webkit-scrollbar { display: none; }
+.nav-section {
+  font-size: 10px; font-weight: 600; color: rgba(255,255,255,.3);
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: 14px 10px 6px; margin-top: 2px;
+}
 .nav-item {
-  display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px;
-  border: none; background: none; border-radius: 8px; color: var(--text2);
-  font-size: 13px; font-weight: 500; text-align: left; margin-bottom: 2px; transition: all .12s;
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px;
+  border: none; background: none; border-radius: 7px; color: rgba(255,255,255,.55);
+  font-size: 13px; font-weight: 500; text-align: left; margin-bottom: 1px;
+  transition: all .12s;
 }
-.nav-item:hover { background: var(--bg); color: var(--text); }
-.nav-item.active { background: var(--accent-bg); color: var(--accent); }
-.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.nav-item:hover { background: rgba(255,255,255,.07); color: rgba(255,255,255,.9); }
+.nav-item.active {
+  background: rgba(79,70,229,.25); color: #818CF8;
+  border-left: 3px solid #4F46E5; padding-left: 7px;
+}
+.nav-icon { font-size: 15px; width: 20px; text-align: center; opacity: .9; }
 .nav-badge {
-  margin-left: auto; background: var(--danger-bg); color: var(--danger);
-  font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 600;
+  margin-left: auto; background: rgba(220,38,38,.2); color: #FCA5A5;
+  font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 600;
 }
-.sidebar-footer { padding: 12px 8px; border-top: 1px solid var(--border); }
-.user-info { display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--bg); border-radius: 8px; }
-.user-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--blue); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
-.user-name { font-size: 13px; font-weight: 600; color: var(--text); }
-.user-role { font-size: 11px; color: var(--text3); }
-.btn-logout { margin-left: auto; background: none; border: none; font-size: 16px; color: var(--text3); padding: 4px; }
+.sidebar-footer {
+  padding: 10px 8px 14px; border-top: 1px solid rgba(255,255,255,.07);
+}
+.user-info {
+  display: flex; align-items: center; gap: 10px; padding: 9px 10px;
+  background: rgba(255,255,255,.05); border-radius: 9px;
+}
+.user-avatar {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--brand);
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+.user-name { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.9); }
+.user-role { font-size: 11px; color: rgba(255,255,255,.4); }
+.btn-logout { margin-left: auto; background: none; border: none; font-size: 16px; color: rgba(255,255,255,.3); padding: 4px; }
 
 /* ===== MAIN ===== */
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .topbar {
-  display: flex; align-items: center; gap: 12px; padding: 14px 20px;
-  background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0;
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 20px; height: var(--topbar-h);
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
-.btn-menu { background: none; border: none; font-size: 20px; color: var(--text2); display: none; padding: 4px 8px; border-radius: 6px; }
-.topbar-title { font-size: 16px; font-weight: 700; color: var(--text); }
-.topbar-sub { font-size: 11px; color: var(--text3); }
-.topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.btn-menu {
+  background: none; border: none; font-size: 20px; color: var(--text3);
+  display: none; padding: 6px; border-radius: 6px;
+}
+.topbar-title { font-size: 15px; font-weight: 600; color: var(--text); }
+.topbar-sub { font-size: 11px; color: var(--text4); margin-top: 1px; }
+.topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 
 /* ===== RELÓGIO ===== */
 .topbar-clock {
   display: flex; flex-direction: column; align-items: center;
-  background: linear-gradient(135deg, #1e1b4b, #312e81);
-  border-radius: 10px; padding: 5px 12px;
-  border: 1px solid rgba(99,102,241,.35);
-  box-shadow: 0 2px 8px rgba(99,102,241,.2);
-  min-width: 106px;
+  background: #EEF2FF; border-radius: 9px; padding: 5px 12px;
+  border: 1.5px solid #C7D2FE; min-width: 100px;
 }
 .clock-time {
-  font-size: 15px; font-weight: 700; color: #a5b4fc;
-  letter-spacing: .1em; font-variant-numeric: tabular-nums; line-height: 1.2;
+  font-size: 14px; font-weight: 700; color: #3730A3;
+  letter-spacing: .08em; font-variant-numeric: tabular-nums; line-height: 1.2;
 }
-.clock-date { font-size: 9px; color: rgba(165,180,252,.55); letter-spacing: .05em; }
+.clock-date { font-size: 9px; color: #6366F1; letter-spacing: .04em; }
 
 /* ===== BOTÃO SAIR ===== */
 .btn-logout-top {
   display: flex; align-items: center; gap: 6px;
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
-  color: #fff; border: none; border-radius: 10px;
-  padding: 7px 14px; font-size: 12px; font-weight: 600;
-  cursor: pointer; transition: all .2s;
-  box-shadow: 0 2px 8px rgba(220,38,38,.2);
+  background: var(--danger-bg); color: var(--danger);
+  border: 1.5px solid var(--danger-b); border-radius: 8px;
+  padding: 6px 12px; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
 }
-.btn-logout-top:hover { background: linear-gradient(135deg, #b91c1c, #991b1b); transform: translateY(-1px); }
-.btn-logout-top:active { transform: translateY(0); }
-.logout-icon { font-size: 15px; line-height: 1; }
+.btn-logout-top:hover { background: #FEE2E2; }
+.logout-icon { font-size: 14px; }
 .logout-label { font-size: 12px; }
 
-@media (max-width: 600px) {
-  .topbar-clock { min-width: 76px; padding: 4px 8px; }
-  .clock-time { font-size: 13px; letter-spacing: .06em; }
-  .clock-date { display: none; }
-  .logout-label { display: none; }
-  .btn-logout-top { padding: 7px 10px; }
-  .logout-icon { font-size: 18px; }
+/* ===== BOTÃO SYNC ===== */
+#btn-sync {
+  background: none; border: 1px solid var(--border); border-radius: 7px;
+  padding: 5px 10px; font-size: 12px; color: var(--text3); cursor: pointer;
 }
-.btn-secondary {
-  padding: 8px 16px; border: 1.5px solid var(--border); border-radius: 8px;
-  background: var(--surface); color: var(--text2); font-size: 13px; font-weight: 500; transition: all .12s;
-}
-.btn-secondary:hover { background: var(--bg); color: var(--text); }
-.content { flex: 1; overflow-y: auto; padding: 20px; }
+#btn-sync:hover { background: var(--bg); }
+
+/* ===== CONTENT ===== */
+.content { flex: 1; overflow-y: auto; padding: 24px; }
 
 /* ===== BOTTOM NAV (mobile) ===== */
 .bottom-nav {
@@ -173,320 +279,165 @@ a { color: var(--accent); text-decoration: none; }
 }
 .bnav-item {
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 6px 4px; background: none; border: none; color: var(--text3); font-size: 9px;
+  padding: 6px 4px; background: none; border: none; color: var(--text4); font-size: 9px;
 }
 .bnav-item span:first-child { font-size: 20px; }
-.bnav-item.active, .bnav-item.active span { color: var(--blue2); }
+.bnav-item.active, .bnav-item.active span { color: var(--brand); }
 
-/* ===== PAGE COMPONENTS ===== */
+/* ===== CARDS & KPIs ===== */
 .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
 .kpi-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-  padding: 16px; border-top: 4px solid var(--blue2);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 16px 18px; border-top: 3px solid var(--brand);
+  transition: box-shadow .15s;
 }
-.kpi-card.green { border-top-color: #1D9E75; }
-.kpi-card.amber { border-top-color: #EF9F27; }
-.kpi-card.red   { border-top-color: #E24B4A; }
-.kpi-label { font-size: 11px; color: var(--text3); font-weight: 500; margin-bottom: 6px; }
-.kpi-value { font-size: 22px; font-weight: 700; color: var(--text); }
-.kpi-delta { font-size: 11px; margin-top: 4px; }
+.kpi-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.06); }
+.kpi-card.green { border-top-color: var(--success); }
+.kpi-card.amber { border-top-color: var(--warning); }
+.kpi-card.red   { border-top-color: var(--danger); }
+.kpi-label { font-size: 11px; color: var(--text3); font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
+.kpi-value { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.2; }
+.kpi-delta { font-size: 11px; margin-top: 4px; color: var(--text4); }
 .kpi-delta.up   { color: var(--success); }
 .kpi-delta.down { color: var(--danger); }
 
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
-.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 18px; margin-bottom: 16px;
+}
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
 .card-title { font-size: 14px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
-.card-action { background: none; border: none; color: var(--accent); font-size: 12px; font-weight: 500; }
+.card-action { background: none; border: none; color: var(--brand); font-size: 12px; font-weight: 500; }
 
-.table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th { font-size: 11px; color: var(--text3); font-weight: 600; text-align: left; padding: 0 8px 10px 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
-td { padding: 11px 8px 11px 0; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: middle; }
-tr:last-child td { border-bottom: none; }
-.td-name { color: var(--text); font-weight: 500; }
-
-.badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
-.b-pago     { background: var(--success-bg); color: var(--success); }
-.b-pendente { background: var(--warning-bg); color: var(--warning); }
-.b-atrasado { background: var(--danger-bg);  color: var(--danger); }
-.b-accent   { background: var(--accent-bg);  color: var(--accent); }
-
-.row-list { display: flex; flex-direction: column; }
-.row-item { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--border); }
-.row-item:last-child { border-bottom: none; }
-.row-left { display: flex; flex-direction: column; gap: 2px; }
-.row-title { font-size: 13px; font-weight: 500; color: var(--text); }
-.row-sub   { font-size: 11px; color: var(--text3); }
-
-.notice-card { background: var(--surface); border-left: 4px solid var(--blue2); border-radius: 0 10px 10px 0; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
-.notice-card.urgent { border-left-color: #E24B4A; }
-.notice-title { font-size: 14px; font-weight: 600; color: var(--text); }
-.notice-meta  { font-size: 11px; color: var(--text3); margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; }
-.notice-reads { color: var(--success); }
-
-.maint-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
-.maint-item:last-child { border-bottom: none; }
-.maint-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-.maint-icon.urg  { background: var(--danger-bg); }
-.maint-icon.warn { background: var(--warning-bg); }
-.maint-icon.ok   { background: var(--success-bg); }
-.maint-body { flex: 1; }
-.maint-title { font-size: 13px; font-weight: 600; color: var(--text); }
-.maint-sub   { font-size: 11px; color: var(--text3); margin-top: 2px; }
-.maint-date  { font-size: 11px; color: var(--text3); white-space: nowrap; }
-
-.area-item { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--border); }
-.area-item:last-child { border-bottom: none; }
-.area-name { font-size: 13px; font-weight: 500; color: var(--text); }
-.area-sub  { font-size: 11px; color: var(--text3); margin-top: 2px; }
-
-.chart-bars { display: flex; align-items: flex-end; gap: 8px; height: 140px; margin: 8px 0; }
-.chart-col  { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; height: 100%; }
-.bar-group  { display: flex; align-items: flex-end; gap: 2px; flex: 1; width: 100%; }
-.bar { flex: 1; border-radius: 4px 4px 0 0; min-height: 4px; }
-.bar.rec  { background: var(--blue2); }
-.bar.desp { background: #F09595; }
-.bar-lbl  { font-size: 9px; color: var(--text3); }
-.chart-legend { display: flex; gap: 16px; margin-top: 6px; }
-.legend-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 4px; }
-.legend-item { font-size: 11px; color: var(--text2); display: flex; align-items: center; }
-
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-.form-full { margin-bottom: 12px; }
-.form-label { font-size: 11px; font-weight: 600; color: var(--text2); margin-bottom: 5px; display: block; }
-.form-input {
-  width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px;
-  background: var(--bg); color: var(--text); transition: border-color .15s;
-  font-size: 16px; /* previne zoom no iOS */
-}
-.form-input:focus { outline: none; border-color: var(--blue2); }
-.form-select { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 16px; }
-.form-textarea { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); min-height: 80px; resize: vertical; font-size: 16px; }
+/* ===== BUTTONS ===== */
 .btn-send {
-  padding: 10px 24px; background: var(--blue); color: #fff; border: none;
-  border-radius: 8px; font-size: 13px; font-weight: 600; transition: background .15s;
+  padding: 9px 18px; background: var(--brand); color: #fff; border: none;
+  border-radius: var(--radius); font-size: 13px; font-weight: 600;
+  transition: all .15s; letter-spacing: -.01em;
 }
-.btn-send:hover { background: #3a3a8e; }
+.btn-send:hover { background: var(--brand-dark); box-shadow: 0 2px 8px rgba(79,70,229,.25); }
+.btn-secondary {
+  padding: 8px 14px; border: 1.5px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--text2); font-size: 13px; font-weight: 500;
+  transition: all .12s;
+}
+.btn-secondary:hover { background: var(--bg); border-color: var(--border2); }
 
-.avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
-.av-blue   { background: var(--accent-bg); color: var(--accent); }
-.av-green  { background: var(--success-bg); color: var(--success); }
-.av-red    { background: var(--danger-bg); color: var(--danger); }
-.av-orange { background: var(--warning-bg); color: var(--warning); }
-.person-cell { display: flex; align-items: center; gap: 8px; }
-.person-name { font-size: 13px; font-weight: 600; color: var(--text); }
+/* ===== FORMS ===== */
+.form-group { margin-bottom: 14px; }
+.form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .03em; }
+.form-input {
+  width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--text); transition: border-color .15s; font-size: 16px;
+}
+.form-input:focus { outline: none; border-color: var(--brand); }
+.form-select { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); font-size: 16px; }
+.form-textarea { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); min-height: 80px; resize: vertical; font-size: 16px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.form-full { margin-bottom: 14px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ===== TABLES ===== */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; padding: 0 12px 10px 0; font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .04em; border-bottom: 2px solid var(--border); }
+td { padding: 11px 12px 11px 0; font-size: 13px; color: var(--text); border-bottom: 1px solid var(--border); }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg); }
+.td-name { font-weight: 500; }
+
+/* ===== BADGES ===== */
+.badge { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
+.b-pago    { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-b); }
+.b-pendente{ background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-b); }
+.b-atrasado{ background: var(--danger-bg);  color: var(--danger);  border: 1px solid var(--danger-b); }
+.b-info    { background: var(--info-bg);    color: var(--info);    border: 1px solid var(--info-b); }
+
+/* ===== MODAL ===== */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; display: none; backdrop-filter: blur(2px); }
+.overlay.active { display: block; }
+.modal-overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 201; padding: 20px; pointer-events: none; }
+#modal { position: fixed; inset: 0; z-index: 201; display: flex; align-items: center; justify-content: center; padding: 20px; }
+#modal.hidden { display: none; }
+.modal-box {
+  background: var(--surface); border-radius: 16px; width: 100%; max-width: 600px;
+  max-height: 90vh; overflow-y: auto; box-shadow: 0 24px 48px rgba(0,0,0,.15);
+  pointer-events: auto;
+}
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--border); }
+.modal-title { font-size: 16px; font-weight: 600; color: var(--text); }
+.modal-close { background: none; border: none; font-size: 20px; color: var(--text3); padding: 4px; border-radius: 6px; }
+.modal-close:hover { background: var(--bg); }
+.modal-body { padding: 20px; }
+.modal-footer { display: flex; gap: 8px; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid var(--border); }
+
+/* ===== TOAST ===== */
+.toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: #111827; color: #fff; padding: 10px 20px; border-radius: 50px;
+  font-size: 13px; font-weight: 500; z-index: 9999; white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,.2);
+  animation: slideUp .2s ease;
+}
+@keyframes slideUp { from { opacity:0; transform: translateX(-50%) translateY(8px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+.toast-ok { border-left: 4px solid var(--success); }
+.toast-error { border-left: 4px solid var(--danger); }
+
+/* ===== PERSON CELL ===== */
+.person-cell { display: flex; align-items: center; gap: 10px; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0; }
+.av-a { background: var(--brand); }
+.av-b { background: var(--success); }
+.av-c { background: var(--warning); }
+.av-d { background: var(--danger); }
+.av-e { background: #7C3AED; }
+.av-f { background: #0891B2; }
+.person-name { font-size: 13px; font-weight: 500; color: var(--text); }
 .person-apt  { font-size: 11px; color: var(--text3); }
 
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.section-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+/* ===== CARD ACTIONS ===== */
+.card-action { background: none; border: none; font-size: 14px; padding: 4px 6px; border-radius: 6px; color: var(--text3); transition: all .12s; }
+.card-action:hover { background: var(--bg); color: var(--text); }
 
-.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; display: none; }
-.overlay.show { display: block; }
-
-/* ===== RESPONSIVE — MOBILE COMPLETO ===== */
+/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
-
-  /* Sidebar — slide-in menu */
-  .sidebar {
-    position: fixed; top: 0; left: 0; bottom: 0;
-    transform: translateX(-100%); z-index: 300; width: 260px;
-  }
+  .sidebar { position: fixed; top: 0; left: 0; bottom: 0; transform: translateX(-100%); z-index: 300; width: 260px; }
   .sidebar.open { transform: translateX(0); box-shadow: 4px 0 20px rgba(0,0,0,.3); }
   .btn-menu { display: flex; }
   .topbar-actions .btn-secondary { display: none; }
-
-  /* Bottom nav visível */
   .bottom-nav { display: flex; }
   .content { padding: 12px 12px 90px; }
-
-  /* KPIs — 2 colunas no mobile */
   .kpi-grid { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-  .kpi-card { padding: 12px; }
   .kpi-value { font-size: 16px; }
-  .kpi-label { font-size: 10px; }
-  .kpi-delta { font-size: 10px; }
-
-  /* Formulários — 1 coluna */
   .form-row { grid-template-columns: 1fr; gap: 8px; }
   .grid2 { grid-template-columns: 1fr; }
-
-  /* Tabelas — scroll horizontal com colunas menos importantes ocultas */
-  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; }
+  .table-wrap { overflow-x: auto; border-radius: 8px; }
   table { min-width: 500px; font-size: 12px; }
-  th { font-size: 10px; padding: 0 6px 8px 0; }
+  th { font-size: 10px; }
   td { padding: 9px 6px 9px 0; font-size: 12px; }
-
-  /* Cards */
   .card { padding: 14px; margin-bottom: 12px; }
   .card-header { flex-wrap: wrap; gap: 8px; }
-  .card-title { font-size: 13px; }
-
-  /* Botões — área de toque maior */
-  .btn-send, .btn-secondary {
-    padding: 10px 14px; font-size: 12px;
-    min-height: 40px; touch-action: manipulation;
-  }
-
-  /* Botões em linha — virar coluna */
-  .card-header > div[style*="display:flex"],
-  .card-header > div[style*="flex-wrap:wrap"] {
-    flex-wrap: wrap; gap: 6px;
-  }
-
-  /* Modal — tela cheia no mobile */
   .modal-overlay { padding: 0; align-items: flex-end; }
-  .modal-box {
-    max-width: 100%; width: 100%; border-radius: 20px 20px 0 0;
-    max-height: 92vh;
-  }
-
-  /* Painel — banner saldo full width */
-  .content > div[style*="grid-template-columns:1fr 1fr 1fr 1fr"] {
-    grid-template-columns: 1fr 1fr !important;
-  }
-  .content > div[style*="grid-template-columns:2fr 1fr 1fr"] {
-    grid-template-columns: 1fr !important;
-  }
-  .content > div[style*="grid-template-columns:repeat(5"] {
-    grid-template-columns: 1fr 1fr !important;
-  }
-  .content > div[style*="grid-template-columns:1fr 1fr"] {
-    grid-template-columns: 1fr 1fr !important;
-  }
-
-  /* Painel — gráfico responsivo */
-  svg { max-width: 100%; height: auto; }
-
-  /* Topbar */
-  .topbar { padding: 0 12px; }
-  .topbar-title { font-size: 14px; }
-
-  /* Login */
-  .login-box { padding: 24px 20px; margin: 16px; }
-
-  /* Pix page — cards lado a lado → coluna */
-  .content > div[style*="display:grid;grid-template-columns:2fr 1fr"] {
-    grid-template-columns: 1fr !important;
-  }
-  .content > div[style*="display:grid;grid-template-columns:1fr 1fr;gap:14px"] {
-    grid-template-columns: 1fr !important;
-  }
-
-  /* Financeiro — esconder colunas menos importantes na tabela */
-  .fin-col-opcional { display: none; }
-
-  /* Botões de ação nas tabelas */
-  .card-action { padding: 6px; font-size: 16px; min-width: 32px; min-height: 32px; }
-
-  /* Badges menores */
-  .badge { font-size: 10px; padding: 2px 7px; }
-
-  /* Textarea importação */
-  #fin-import-txt { font-size: 11px; min-height: 80px; }
-
-  /* Portal morador — tabela overflow */
-  .table-wrap table { min-width: 400px; }
-
-  /* Fundo de reserva / DRE — grid virar coluna */
-  .content > div[style*="display:grid;grid-template-columns:2fr 1fr"] {
-    display: flex !important; flex-direction: column !important;
-  }
-
-  /* Toast — posição acima do bottom nav */
+  .modal-box { max-width: 100%; border-radius: 20px 20px 0 0; max-height: 92vh; }
+  .topbar-clock { min-width: 80px; padding: 4px 8px; }
+  .clock-time { font-size: 13px; }
+  .clock-date { display: none; }
+  .logout-label { display: none; }
+  .btn-logout-top { padding: 6px 10px; }
   .toast { bottom: 76px; }
-
-  /* Avisos box info */
-  div[style*="background:#e0e7ff"] { font-size: 12px; }
-  div[style*="background:#f0fdf4"] { font-size: 12px; }
 }
-
-/* Telas muito pequenas (< 380px) — iPhone SE, etc */
 @media (max-width: 380px) {
   .kpi-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
   .kpi-value { font-size: 14px; }
   .content { padding: 10px 10px 90px; }
-  .card { padding: 12px; }
-  .btn-send, .btn-secondary { font-size: 11px; padding: 9px 10px; }
-  table { min-width: 360px; font-size: 11px; }
-  .bottom-nav { padding: 4px 0; }
-  .bnav-item { font-size: 8px; }
-  .bnav-item span:first-child { font-size: 18px; }
 }
-
-/* Tablets (769px - 1024px) */
 @media (min-width: 769px) and (max-width: 1024px) {
-  :root { --sidebar-w: 200px; }
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  .form-row { grid-template-columns: 1fr 1fr; }
+  :root { --sidebar-w: 210px; }
 }
-
-/* Touch devices — melhorar área de toque */
 @media (hover: none) and (pointer: coarse) {
-  .btn-send, .btn-secondary, .nav-item, .bnav-item, .card-action {
-    min-height: 44px; touch-action: manipulation;
-  }
-  select, input, textarea {
-    font-size: 16px !important; /* evita zoom automático no iOS */
-  }
+  .btn-send, .btn-secondary, .nav-item, .bnav-item, .card-action { min-height: 44px; touch-action: manipulation; }
+  select, input, textarea { font-size: 16px !important; }
 }
-
-
-/* ===== MODAL ===== */
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,.55);
-  z-index: 500; display: flex; align-items: center; justify-content: center; padding: 16px;
-}
-.modal-box {
-  background: var(--surface); border-radius: 16px; width: 100%; max-width: 520px;
-  max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 8px 40px rgba(0,0,0,.25);
-}
-.modal-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
-}
-.modal-title { font-size: 16px; font-weight: 700; color: var(--text); }
-.modal-close { background: none; border: none; font-size: 18px; color: var(--text3); padding: 4px 8px; }
-.modal-close:hover { color: var(--text); }
-.modal-body { flex: 1; overflow-y: auto; padding: 18px 20px; }
-.modal-footer {
-  display: flex; gap: 10px; justify-content: flex-end;
-  padding: 14px 20px; border-top: 1px solid var(--border);
-}
-
-/* ===== EXTRAS ===== */
-.av-purple { background: #EDE9FB; color: #534AB7; }
-
-/* MODAL */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px}
-.modal-box{background:var(--surface);border-radius:16px;width:100%;max-width:520px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.25)}
-.modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--border)}
-.modal-title{font-size:16px;font-weight:700;color:var(--text)}
-.modal-close{background:none;border:none;font-size:18px;color:var(--text3);padding:4px 8px;cursor:pointer}
-.modal-body{flex:1;overflow-y:auto;padding:18px 20px}
-.modal-footer{display:flex;gap:10px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--border)}
-
-/* TOAST */
-.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:999;animation:toastIn .3s ease;white-space:nowrap;max-width:90vw;text-align:center}
-.toast-ok{background:#0F6E56}
-.toast-err{background:#A32D2D}
-@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-
-/* EXTRAS */
-.av-purple{background:#EDE9FB;color:#534AB7}
-
-
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px}
-.modal-box{background:var(--surface);border-radius:16px;width:100%;max-width:520px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.25)}
-.modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--border)}
-.modal-title{font-size:16px;font-weight:700;color:var(--text)}
-.modal-close{background:none;border:none;font-size:18px;color:var(--text3);padding:4px 8px;cursor:pointer}
-.modal-body{flex:1;overflow-y:auto;padding:18px 20px}
-.modal-footer{display:flex;gap:10px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--border)}
-.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:999;animation:toastIn .3s ease;white-space:nowrap;max-width:90vw;text-align:center}
-.toast-ok{background:#0F6E56}.toast-err{background:#A32D2D}
-.av-purple{background:#EDE9FB;color:#534AB7}
-@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-
 </style>
 </head>
 <body>
@@ -494,81 +445,108 @@ tr:last-child td { border-bottom: none; }
   <div id="form-externo-conteudo" style="max-width:560px;width:100%;margin:0 auto"></div>
 </div>
 <div id="login-screen" class="login-screen">
-  <div class="login-box">
-    <div class="login-logo"><div class="login-icon">🏢</div><h1>NexCondo</h1><p>Sistema de gestão condominial</p></div>
-    <div class="form-group">
-      <label>Usuário</label>
-      <input type="email" id="login-user" value="sindico@condo.com" list="login-historico" autocomplete="email">
-      <datalist id="login-historico"></datalist>
-      <div id="login-historico-display" style="margin-top:5px;display:flex;flex-wrap:wrap;gap:4px"></div>
+  <div class="login-left">
+    <div class="login-brand">
+      <div class="login-brand-icon">🏢</div>
+      <div class="login-brand-name">NexCondo</div>
     </div>
-    <div class="form-group">
-      <label>Senha</label>
-      <div style="position:relative">
-        <input type="password" id="login-pass" value="123456" style="padding-right:40px;width:100%;box-sizing:border-box">
-        <button type="button" onclick="toggleSenhaVis()" id="btn-olho" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;padding:0;line-height:1;color:#888" title="Mostrar/ocultar senha">👁</button>
+    <h1 class="login-tagline">Gestão condominial<br><span>inteligente e simples</span></h1>
+    <p class="login-desc">Tudo que um síndico precisa em um único sistema. Financeiro, moradores, manutenção, comunicados e muito mais — acessível de qualquer dispositivo.</p>
+    <div class="login-features">
+      <div class="login-feature"><div class="login-feature-dot"></div>Sincronização em tempo real entre todos os dispositivos</div>
+      <div class="login-feature"><div class="login-feature-dot"></div>Portal do morador com acesso restrito por unidade</div>
+      <div class="login-feature"><div class="login-feature-dot"></div>34 módulos completos de gestão condominial</div>
+      <div class="login-feature"><div class="login-feature-dot"></div>Relatórios financeiros, DRE e orçamento anual</div>
+    </div>
+  </div>
+  <div class="login-right">
+    <div class="login-box">
+      <div class="login-box-logo">
+        <div class="login-box-icon">🏢</div>
+        <div class="login-box-title">Bem-vindo de volta</div>
+        <div class="login-box-sub">Acesse sua conta NexCondo</div>
       </div>
-    </div>
-    <button class="btn-primary" onclick="doLogin()">Entrar</button>
-    <div class="login-links"><span style="font-size:11px;color:#aaa">Login padrão: sindico@condo.com · 123456</span></div>
-    <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.1);text-align:center">
-      <p style="font-size:11px;color:#aaa;margin-bottom:8px">Migrando do CondoGest? Importe seu backup:</p>
-      <button type="button" onclick="document.getElementById('import-backup-login').click()" style="background:rgba(83,74,183,.2);border:1px solid rgba(83,74,183,.4);border-radius:8px;padding:6px 14px;font-size:11px;color:#a5b4fc;cursor:pointer">📥 Importar backup (.json)</button>
-      <input type="file" id="import-backup-login" accept=".json" style="display:none" onchange="importarBackupLogin(this)">
+      <div style="margin-bottom:14px">
+        <label class="login-label">E-mail</label>
+        <input type="email" id="login-user" class="login-input" value="sindico@condo.com" list="login-historico" autocomplete="email" placeholder="seu@email.com">
+        <datalist id="login-historico"></datalist>
+        <div id="login-historico-display" style="margin-top:5px;display:flex;flex-wrap:wrap;gap:4px"></div>
+      </div>
+      <div style="margin-bottom:20px">
+        <label class="login-label">Senha</label>
+        <div style="position:relative">
+          <input type="password" id="login-pass" class="login-input" value="123456" style="padding-right:44px" placeholder="••••••">
+          <button type="button" onclick="toggleSenhaVis()" id="btn-olho" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;padding:0;color:#9CA3AF">👁</button>
+        </div>
+      </div>
+      <button class="login-submit" onclick="doLogin()">Entrar no sistema</button>
+      <div class="login-import">
+        <p style="font-size:11px;color:#9CA3AF;margin-bottom:8px">Restaurar dados de um backup anterior:</p>
+        <button type="button" onclick="document.getElementById('import-backup-login').click()" style="background:#EEF2FF;border:1px solid #C7D2FE;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:500;color:#4F46E5;cursor:pointer">📥 Importar backup (.json)</button>
+        <input type="file" id="import-backup-login" accept=".json" style="display:none" onchange="importarBackupLogin(this)">
+      </div>
     </div>
   </div>
 </div>
 <div id="app" class="app hidden">
 <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo"><div class="sidebar-logo-icon">🏢</div><div><div class="sidebar-name">NexCondo</div><div class="sidebar-condo">Meu Condomínio</div></div></div>
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">🏢</div>
+      <div>
+        <div class="sidebar-name">NexCondo</div>
+        <div class="sidebar-condo">Meu Condomínio</div>
+      </div>
+    </div>
     <nav class="sidebar-nav">
       <div class="nav-section">Principal</div>
       <button class="nav-item active" data-page="painel" onclick="navigate('painel',this)"><span class="nav-icon">📊</span>Painel</button>
-      <button class="nav-item" data-page="financeiro" onclick="navigate('financeiro',this)"><span class="nav-icon">💰</span>Financeiro</button>
-      <button class="nav-item" data-page="despesasFixas" onclick="navigate('despesasFixas',this)"><span class="nav-icon">📆</span>Despesas Fixas/Variáveis</button>
-      <button class="nav-item" data-page="relatorios" onclick="navigate('relatorios',this)"><span class="nav-icon">📋</span>Relatórios Gerais</button>
+
+      <div class="nav-section">Financeiro</div>
+      <button class="nav-item" data-page="financeiro" onclick="navigate('financeiro',this)"><span class="nav-icon">💰</span>Movimentações</button>
+      <button class="nav-item" data-page="despesasFixas" onclick="navigate('despesasFixas',this)"><span class="nav-icon">📆</span>Despesas Fixas</button>
+      <button class="nav-item" data-page="inadimplentes" onclick="navigate('inadimplentes',this)"><span class="nav-icon">⚠️</span>Inadimplentes</button>
+      <button class="nav-item" data-page="fundoReserva" onclick="navigate('fundoReserva',this)"><span class="nav-icon">🏦</span>Fundo de Reserva</button>
+      <button class="nav-item" data-page="pix" onclick="navigate('pix',this)"><span class="nav-icon">💳</span>Pix / Cobrança</button>
+      <button class="nav-item" data-page="relatorios" onclick="navigate('relatorios',this)"><span class="nav-icon">📋</span>Relatórios</button>
       <button class="nav-item" data-page="dre" onclick="navigate('dre',this)"><span class="nav-icon">📈</span>DRE / Balancete</button>
       <button class="nav-item" data-page="orcamento" onclick="navigate('orcamento',this)"><span class="nav-icon">🎯</span>Orçamento Anual</button>
-      <button class="nav-item" data-page="fundoReserva" onclick="navigate('fundoReserva',this)"><span class="nav-icon">🏦</span>Fundo de Reserva</button>
-      <button class="nav-item" data-page="lixeira" onclick="navigate('lixeira',this)"><span class="nav-icon">🗑</span>Lixeira</button>
-      <button class="nav-item" data-page="inadimplentes" onclick="navigate('inadimplentes',this)"><span class="nav-icon">⚠️</span>Inadimplentes</button>
+
       <div class="nav-section">Moradores</div>
       <button class="nav-item" data-page="moradores" onclick="navigate('moradores',this)"><span class="nav-icon">👥</span>Moradores</button>
       <button class="nav-item" data-page="portalMorador" onclick="navigate('portalMorador',this)"><span class="nav-icon">📱</span>Portal do Morador</button>
       <button class="nav-item" data-page="comunicados" onclick="navigate('comunicados',this)"><span class="nav-icon">🔔</span>Comunicados</button>
-      <button class="nav-item" data-page="ouvidoria" onclick="navigate('ouvidoria',this)"><span class="nav-icon">🗣️</span>Ouvidoria</button>
       <button class="nav-item" data-page="assembleias" onclick="navigate('assembleias',this)"><span class="nav-icon">🗳️</span>Assembleias</button>
+      <button class="nav-item" data-page="ouvidoria" onclick="navigate('ouvidoria',this)"><span class="nav-icon">🗣️</span>Ouvidoria</button>
       <button class="nav-item" data-page="reservas" onclick="navigate('reservas',this)"><span class="nav-icon">📅</span>Reservas</button>
-      <div class="nav-section">Funcionários</div>
-      <button class="nav-item" data-page="funcionarios" onclick="navigate('funcionarios',this)"><span class="nav-icon">👷</span>Funcionários</button>
-      <button class="nav-item" data-page="ferias" onclick="navigate('ferias',this)"><span class="nav-icon">🏖️</span>Férias / Escalas</button>
+
       <div class="nav-section">Operações</div>
       <button class="nav-item" data-page="manutencao" onclick="navigate('manutencao',this)"><span class="nav-icon">🔧</span>Manutenções</button>
-      <button class="nav-item" data-page="preventivas" onclick="navigate('preventivas',this)"><span class="nav-icon">🗓️</span>Preventivas</button>
       <button class="nav-item" data-page="chamados" onclick="navigate('chamados',this)"><span class="nav-icon">🎫</span>Chamados</button>
-      <button class="nav-item" data-page="ocorrencias" onclick="navigate('ocorrencias',this)"><span class="nav-icon">📓</span>Ocorrências</button>
-      <button class="nav-item" data-page="fornecedores" onclick="navigate('fornecedores',this)"><span class="nav-icon">🏢</span>Fornecedores</button>
-      <button class="nav-item" data-page="contratos" onclick="navigate('contratos',this)"><span class="nav-icon">📜</span>Contratos</button>
-      <button class="nav-item" data-page="estoque" onclick="navigate('estoque',this)"><span class="nav-icon">📦</span>Estoque</button>
-      <div class="nav-section">Patrimônio e Compras</div>
-      <button class="nav-item" data-page="patrimonio" onclick="navigate('patrimonio',this)"><span class="nav-icon">🏷️</span>Patrimônio</button>
-      <button class="nav-item" data-page="chaves" onclick="navigate('chaves',this)"><span class="nav-icon">🔑</span>Controle de Chaves</button>
-      <button class="nav-item" data-page="compras" onclick="navigate('compras',this)"><span class="nav-icon">🛒</span>Compras</button>
-      <div class="nav-section">Portaria</div>
+      <button class="nav-item" data-page="preventivas" onclick="navigate('preventivas',this)"><span class="nav-icon">🗓️</span>Manutenção Prev.</button>
       <button class="nav-item" data-page="encomendas" onclick="navigate('encomendas',this)"><span class="nav-icon">📬</span>Encomendas</button>
       <button class="nav-item" data-page="visitantes" onclick="navigate('visitantes',this)"><span class="nav-icon">🚪</span>Visitantes</button>
-      <div class="nav-section">Pix e Cobrança</div>
-      <button class="nav-item" data-page="pix" onclick="navigate('pix',this)"><span class="nav-icon">💳</span>Pix / QR Code</button>
-      <div class="nav-section">WhatsApp</div>
-      <button class="nav-item" data-page="whatsapp" onclick="navigate('whatsapp',this)"><span class="nav-icon">💬</span>WhatsApp</button>
-      <div class="nav-section">Sistema</div>
+      <button class="nav-item" data-page="ocorrencias" onclick="navigate('ocorrencias',this)"><span class="nav-icon">📓</span>Ocorrências</button>
+      <button class="nav-item" data-page="chaves" onclick="navigate('chaves',this)"><span class="nav-icon">🔑</span>Controle de Chaves</button>
+
+      <div class="nav-section">Administrativo</div>
+      <button class="nav-item" data-page="fornecedores" onclick="navigate('fornecedores',this)"><span class="nav-icon">🏢</span>Fornecedores</button>
+      <button class="nav-item" data-page="contratos" onclick="navigate('contratos',this)"><span class="nav-icon">📜</span>Contratos</button>
+      <button class="nav-item" data-page="compras" onclick="navigate('compras',this)"><span class="nav-icon">🛒</span>Compras</button>
+      <button class="nav-item" data-page="estoque" onclick="navigate('estoque',this)"><span class="nav-icon">📦</span>Estoque</button>
+      <button class="nav-item" data-page="patrimonio" onclick="navigate('patrimonio',this)"><span class="nav-icon">🏷️</span>Patrimônio</button>
+      <button class="nav-item" data-page="funcionarios" onclick="navigate('funcionarios',this)"><span class="nav-icon">👷</span>Funcionários</button>
+      <button class="nav-item" data-page="ferias" onclick="navigate('ferias',this)"><span class="nav-icon">🏖️</span>Férias / Escalas</button>
       <button class="nav-item" data-page="documentos" onclick="navigate('documentos',this)"><span class="nav-icon">📄</span>Documentos</button>
-      <button class="nav-item" data-page="configuracoes" onclick="navigate('configuracoes',this)"><span class="nav-icon">⚙️</span>Configurações</button>
+
+      <div class="nav-section">Sistema</div>
+      <button class="nav-item" data-page="whatsapp" onclick="navigate('whatsapp',this)"><span class="nav-icon">💬</span>WhatsApp</button>
+      <button class="nav-item" data-page="lixeira" onclick="navigate('lixeira',this)"><span class="nav-icon">🗑️</span>Lixeira</button>
       <button class="nav-item" data-page="usuarios" onclick="navigate('usuarios',this)"><span class="nav-icon">👤</span>Usuários</button>
+      <button class="nav-item" data-page="configuracoes" onclick="navigate('configuracoes',this)"><span class="nav-icon">⚙️</span>Configurações</button>
     </nav>
     <div class="sidebar-footer">
       <div class="user-info">
-        <div class="user-avatar">JS</div>
+        <div class="user-avatar">MS</div>
         <div><div class="user-name">Síndico</div><div class="user-role">Administrador</div></div>
         <button class="btn-logout" onclick="doLogout()" title="Sair">↩</button>
       </div>
@@ -577,10 +555,10 @@ tr:last-child td { border-bottom: none; }
   <main class="main">
     <header class="topbar">
       <button class="btn-menu" onclick="toggleSidebar()">☰</button>
-      <div><div class="topbar-title" id="page-title">Painel geral</div><div class="topbar-sub" id="topbar-sub"></div></div>
+      <div><div class="topbar-title" id="page-title">Painel</div><div class="topbar-sub" id="topbar-sub"></div></div>
       <div class="topbar-actions">
-        <span id="sync-status" style="font-size:11px;color:#94a3b8;white-space:nowrap">💾 Local</span>
-        <button id="btn-sync" onclick="sincronizarDoServidor()" title="Sincronizar agora" style="background:none;border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--text2);cursor:pointer">🔄 Sync</button>
+        <span id="sync-status" style="font-size:11px;color:#9CA3AF;white-space:nowrap">💾 Local</span>
+        <button id="btn-sync" onclick="sincronizarDoServidor()" title="Sincronizar agora">🔄 Sync</button>
         <div class="topbar-clock" id="topbar-clock">
           <div class="clock-time" id="clock-time">00:00:00</div>
           <div class="clock-date" id="clock-date">--/--/----</div>
@@ -595,7 +573,7 @@ tr:last-child td { border-bottom: none; }
   </main>
   <nav class="bottom-nav">
     <button class="bnav-item active" data-page="painel" onclick="navigate('painel',this)"><span>📊</span><span>Painel</span></button>
-    <button class="bnav-item" data-page="financeiro" onclick="navigate('financeiro',this)"><span>💰</span><span>Financeiro</span></button>
+    <button class="bnav-item" data-page="financeiro" onclick="navigate('financeiro',this)"><span>💰</span><span>Finan.</span></button>
     <button class="bnav-item" data-page="pix" onclick="navigate('pix',this)"><span>💳</span><span>Pix</span></button>
     <button class="bnav-item" data-page="encomendas" onclick="navigate('encomendas',this)"><span>📬</span><span>Portaria</span></button>
     <button class="bnav-item" data-page="whatsapp" onclick="navigate('whatsapp',this)"><span>💬</span><span>WhatsApp</span></button>
@@ -1592,6 +1570,7 @@ financeiro(){
     '<button class="btn-secondary" onclick="lancamentoEmLote()">📅 Lançar mês em lote</button>'+
     '<button class="btn-secondary" onclick="verDRE()">📈 DRE/Balancete</button>'+
     '<button class="btn-secondary" onclick="exportarFinanceiroPDF()">📄 Exportar PDF</button>'+
+    '<button class="btn-secondary" style="background:#111827;color:#fff;border-color:#111827" onclick="gerarRelatorioExecutivo()">📊 Relatório Executivo</button>'+
     '<button class="btn-secondary" style="color:#e24b4a;border-color:#e24b4a" onclick="navigate(\'lixeira\')">🗑 Lixeira ('+getLixeira().length+')</button>'+
     '</div>'+
     '<div class="card" style="border-top:3px solid #25D366;margin-bottom:16px">'+
@@ -1646,7 +1625,7 @@ inadimplentes(){
     </tr>`).join(''):`<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px">✅ Nenhum inadimplente!</td></tr>`;
   return`
     <div class="card">
-      <div class="card-header"><div class="card-title">⚠️ Inadimplentes</div><div style="display:flex;gap:8px"><button class="btn-secondary" onclick="imprimirRelatorio('inadimplentes')">🖨️ Imprimir</button><button class="btn-secondary" onclick="exportarInadimplentesPDF()">📄 Exportar PDF</button></div></div>
+      <div class="card-header"><div class="card-title">⚠️ Inadimplentes</div><div style="display:flex;gap:8px"><button class="btn-secondary" onclick="imprimirRelatorio('inadimplentes')">🖨️ Imprimir</button><button class="btn-secondary" onclick="exportarInadimplentesPDF()">📄 Exportar PDF</button><button class="btn-secondary" style="background:#25D366;color:#fff;border-color:#25D366" onclick="enviarWAInadimplentes()">💬 Cobrar via WA</button></div></div>
       <div class="table-wrap"><table><thead><tr><th>Morador</th><th>Débito</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
       ${inad.length?`<div style="margin-top:12px;padding:12px;background:var(--danger-bg);border-radius:8px;font-size:13px;color:var(--danger)"><strong>Total em aberto: ${fmtVal(inad.reduce((s,m)=>s+Number(m.debito||0),0))}</strong></div>`:''}
     </div>`;
@@ -1999,7 +1978,33 @@ documentos(){
 configuracoes(){
   const cfg=getConfig(),login=DB.get('login')||{user:'sindico@condo.com',pass:'123456'};
   const cloudAtivo=CLOUD_ENABLED;
+  const condos=getCondominios();
   return`
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <button class="btn-send" onclick="iniciarOnboarding()">🚀 Assistente de configuração</button>
+      <button class="btn-secondary" onclick="gerarRelatorioExecutivo()">📊 Relatório Executivo PDF</button>
+    </div>
+    ${condos.length>0?`
+    <div class="card" style="margin-bottom:14px;border-top:3px solid #4F46E5">
+      <div class="card-header">
+        <div class="card-title">🏢 Multi-condomínio</div>
+        <button class="btn-send" onclick="novoCondominio()">+ Novo condomínio</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+        ${condos.map(c=>`
+        <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:12px;cursor:pointer" onclick="trocarCondominio('${c.id}')">
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px">${c.nome}</div>
+          <div style="font-size:11px;color:var(--text3)">Clique para acessar</div>
+        </div>`).join('')}
+      </div>
+    </div>`:`
+    <div class="card" style="margin-bottom:14px;border-top:3px solid var(--border)">
+      <div class="card-header">
+        <div class="card-title">🏢 Multi-condomínio</div>
+        <button class="btn-secondary" onclick="novoCondominio()">+ Adicionar condomínio</button>
+      </div>
+      <div style="font-size:12px;color:var(--text3)">Gerencie vários condomínios com a mesma conta. Clique em "Adicionar condomínio" para começar.</div>
+    </div>`}
     <div class="card" style="border-top:3px solid ${cloudAtivo?'#22c55e':'#f59e0b'}">
       <div class="card-header">
         <div class="card-title">${cloudAtivo?'☁️ Sincronização ativa':'💾 Sincronização desativada'}</div>
@@ -5631,6 +5636,311 @@ function _registrarTentativa(email,sucesso){
   return b[email].tentativas;
 }
 
+// ===== MULTI-CONDOMÍNIO =====
+function getCondominios(){
+  try{return JSON.parse(localStorage.getItem('nexcondo_condominios')||'[]');}catch(e){return [];}
+}
+function salvarCondominios(lista){
+  localStorage.setItem('nexcondo_condominios',JSON.stringify(lista));
+}
+function getCondominioAtual(){
+  try{return localStorage.getItem('nexcondo_condo_atual')||'default';}catch(e){return 'default';}
+}
+function trocarCondominio(id){
+  var condos=getCondominios();
+  var condo=condos.find(function(c){return c.id===id;});
+  if(!condo)return;
+  // Salvar prefixo atual
+  localStorage.setItem('nexcondo_condo_atual',id);
+  // Atualizar prefixo do DB
+  DB._prefix='cg3_'+id+'_';
+  DB.init();
+  _carregarPerfis();
+  var cfg=getConfig();
+  var sb=document.querySelector('.sidebar-condo');
+  if(sb)sb.textContent=cfg.nome||condo.nome;
+  navigate('painel');
+  toast('🏢 Condomínio: '+condo.nome);
+}
+function novoCondominio(){
+  var nome=prompt('Nome do novo condomínio:');
+  if(!nome||!nome.trim())return;
+  var condos=getCondominios();
+  var id='condo_'+Date.now();
+  condos.push({id:id,nome:nome.trim(),criado:new Date().toISOString()});
+  salvarCondominios(condos);
+  toast('✅ Condomínio "'+nome+'" criado! Acesse em Configurações → Multi-condomínio.');
+}
+
+// ===== ONBOARDING WIZARD =====
+var _onboardingAtivo=false;
+function iniciarOnboarding(){
+  _onboardingAtivo=true;
+  _renderOnboarding(1);
+}
+function _renderOnboarding(passo){
+  var passos=[
+    {titulo:'Bem-vindo ao NexCondo! 🎉',sub:'Vamos configurar seu condomínio em 4 passos simples.',icone:'🏢',
+     campos:'<div class="form-full"><label class="form-label">Nome do condomínio</label><input id="ob-nome" class="form-input" placeholder="Ex: Residencial Jardim das Flores" value="'+( getConfig().nome!=='Meu Condomínio'?getConfig().nome:'')+'"></div>'+
+     '<div class="form-row"><div><label class="form-label">Síndico responsável</label><input id="ob-sindico" class="form-input" placeholder="Nome completo" value="'+(getConfig().sindico||'')+'"></div>'+
+     '<div><label class="form-label">Total de unidades</label><input id="ob-unidades" type="number" class="form-input" placeholder="Ex: 28" value="'+(getConfig().unidades||'')+'"></div></div>'+
+     '<div class="form-row"><div><label class="form-label">CNPJ (opcional)</label><input id="ob-cnpj" class="form-input" placeholder="00.000.000/0001-00" value="'+(getConfig().cnpj||'')+'"></div>'+
+     '<div><label class="form-label">Telefone do síndico</label><input id="ob-tel" class="form-input" placeholder="(85) 99999-9999" value="'+(getConfig().telefone||'')+'"></div></div>',
+     acao:function(){
+       var nome=document.getElementById('ob-nome').value.trim();
+       var sindico=document.getElementById('ob-sindico').value.trim();
+       var unidades=document.getElementById('ob-unidades').value;
+       if(!nome||!sindico){alert('Preencha o nome e o síndico.');return false;}
+       var cfg=getConfig();
+       cfg.nome=nome;cfg.sindico=sindico;cfg.unidades=unidades;
+       cfg.cnpj=document.getElementById('ob-cnpj').value.trim();
+       cfg.telefone=document.getElementById('ob-tel').value.trim();
+       DB.set('config',cfg);
+       var sb=document.querySelector('.sidebar-condo');
+       if(sb)sb.textContent=nome;
+       return true;
+     }
+    },
+    {titulo:'Configurar Pix 💳',sub:'Como os moradores vão pagar a taxa condominial.',icone:'💳',
+     campos:'<div class="form-row"><div><label class="form-label">Tipo de chave Pix</label>'+
+     '<select id="ob-pix-tipo" class="form-select"><option value="cpf">CPF</option><option value="cnpj">CNPJ</option><option value="email">E-mail</option><option value="telefone">Telefone</option><option value="aleatoria">Chave aleatória</option></select></div>'+
+     '<div><label class="form-label">Chave Pix</label><input id="ob-pix-chave" class="form-input" placeholder="Sua chave Pix" value="'+(DB.get('pix')||{}).chave||''+'" ></div></div>'+
+     '<div class="form-row"><div><label class="form-label">Nome do favorecido</label><input id="ob-pix-nome" class="form-input" placeholder="Nome completo" value="'+(DB.get('pix')||{}).nome||''+'" ></div>'+
+     '<div><label class="form-label">Taxa condominial (R$)</label><input id="ob-pix-taxa" type="number" class="form-input" placeholder="0,00" value="'+(DB.get('pix')||{}).taxa||''+'" ></div></div>',
+     acao:function(){
+       var chave=document.getElementById('ob-pix-chave').value.trim();
+       var pix=DB.get('pix')||{};
+       pix.tipo=document.getElementById('ob-pix-tipo').value;
+       pix.chave=chave;
+       pix.nome=document.getElementById('ob-pix-nome').value.trim();
+       pix.taxa=Number(document.getElementById('ob-pix-taxa').value)||0;
+       DB.set('pix',pix);
+       return true;
+     }
+    },
+    {titulo:'Senha de acesso 🔐',sub:'Defina uma senha segura para o administrador.',icone:'🔐',
+     campos:'<div class="form-full"><label class="form-label">E-mail de acesso</label><input id="ob-email" type="email" class="form-input" placeholder="sindico@condo.com" value="'+(DB.get('login')||{user:'sindico@condo.com'}).user+'"></div>'+
+     '<div class="form-row"><div><label class="form-label">Nova senha</label><input id="ob-senha1" type="password" class="form-input" placeholder="Mínimo 6 caracteres"></div>'+
+     '<div><label class="form-label">Confirmar senha</label><input id="ob-senha2" type="password" class="form-input" placeholder="Digite novamente"></div></div>'+
+     '<div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400E;margin-top:4px">⚠️ Guarde bem sua senha. Em caso de perda, use o backup JSON para recuperar os dados.</div>',
+     acao:function(){
+       var email=document.getElementById('ob-email').value.trim();
+       var s1=document.getElementById('ob-senha1').value;
+       var s2=document.getElementById('ob-senha2').value;
+       if(!email){alert('Digite o e-mail.');return false;}
+       if(s1&&s1.length<6){alert('Senha deve ter no mínimo 6 caracteres.');return false;}
+       if(s1&&s1!==s2){alert('As senhas não coincidem.');return false;}
+       if(s1){
+         DB.set('login',{user:email,pass:s1});
+         var usuarios=getUsuarios();
+         var adm=usuarios.find(function(u){return u.perfil==='admin';});
+         if(adm){adm.email=email;adm.senha=s1;DB.set('usuarios',usuarios);}
+       }
+       return true;
+     }
+    },
+    {titulo:'Tudo pronto! 🚀',sub:'Seu NexCondo está configurado e pronto para uso.',icone:'🚀',
+     campos:'<div style="text-align:center;padding:20px 0">'+
+     '<div style="font-size:60px;margin-bottom:16px">🎉</div>'+
+     '<div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px">'+getConfig().nome+' configurado!</div>'+
+     '<div style="font-size:14px;color:var(--text3);margin-bottom:24px;line-height:1.6">Agora você pode começar a usar o NexCondo.<br>Cadastre os moradores e lance as primeiras movimentações.</div>'+
+     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left">'+
+     '<div style="background:var(--brand-light);border-radius:10px;padding:12px 14px"><div style="font-size:12px;font-weight:600;color:var(--brand-text);margin-bottom:4px">📋 Próximo passo 1</div><div style="font-size:12px;color:var(--text3)">Cadastre os moradores em Moradores → + Novo morador</div></div>'+
+     '<div style="background:var(--brand-light);border-radius:10px;padding:12px 14px"><div style="font-size:12px;font-weight:600;color:var(--brand-text);margin-bottom:4px">💰 Próximo passo 2</div><div style="font-size:12px;color:var(--text3)">Lance as taxas em Financeiro → Lançar mês em lote</div></div>'+
+     '</div></div>',
+     acao:function(){return true;}
+    }
+  ];
+  var p=passos[passo-1];
+  var progressBar=passos.map(function(_,i){
+    return '<div style="flex:1;height:4px;border-radius:2px;background:'+(i<passo?'var(--brand)':'var(--border)')+'"></div>';
+  }).join('');
+
+  var html='<div style="text-align:center;margin-bottom:20px">'+
+    '<div style="font-size:36px;margin-bottom:8px">'+p.icone+'</div>'+
+    '<div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px">'+p.titulo+'</div>'+
+    '<div style="font-size:13px;color:var(--text3)">'+p.sub+'</div>'+
+    '</div>'+
+    '<div style="display:flex;gap:4px;margin-bottom:24px">'+progressBar+'</div>'+
+    p.campos;
+
+  var isFinal=(passo===passos.length);
+  modal('Configuração inicial ('+passo+'/'+passos.length+')',html,function(){
+    if(p.acao()===false)return;
+    closeModal();
+    if(!isFinal){_renderOnboarding(passo+1);}
+    else{
+      _onboardingAtivo=false;
+      localStorage.setItem('nexcondo_onboarding_ok','1');
+      navigate('painel');
+      toast('🎉 Configuração concluída!');
+    }
+  });
+  // Trocar texto do botão salvar
+  setTimeout(function(){
+    var btn=document.getElementById('modal-save');
+    if(btn)btn.textContent=isFinal?'Ir para o painel →':'Continuar →';
+  },50);
+}
+
+// ===== RELATÓRIO EXECUTIVO PDF =====
+function gerarRelatorioExecutivo(){
+  var cfg=getConfig();
+  var movs=getMovimentacoes();
+  var mors=getMoradores();
+  var manut=getManutencoes?getManutencoes():[];
+  var hoje=new Date();
+  var mesAtual=hoje.getMonth();
+  var anoAtual=hoje.getFullYear();
+  var mesesNomes=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var fmtR=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});};
+
+  // Calcular KPIs
+  var recTotal=0,despTotal=0,recMes=0,despMes=0;
+  movs.forEach(function(m){
+    var v=Number(m.valor||0);
+    var iso=m.dataISO||'';
+    var a=iso?parseInt(iso.slice(0,4)):(m.data?parseInt(m.data.split('/')[2]):0);
+    var mm=iso?parseInt(iso.slice(5,7))-1:(m.data?parseInt(m.data.split('/')[1])-1:0);
+    if(m.tipo==='receita'&&m.status==='pago'){recTotal+=v;if(mm===mesAtual&&a===anoAtual)recMes+=v;}
+    if(m.tipo==='despesa'&&m.status==='pago'){despTotal+=v;if(mm===mesAtual&&a===anoAtual)despMes+=v;}
+  });
+  var saldoGeral=recTotal-despTotal;
+  var inad=mors.filter(function(m){return m.status==='inadimplente';});
+  var adimPct=mors.length?Math.round((mors.length-inad.length)/mors.length*100):100;
+
+  // Últimas 6 movimentações
+  var ultMovs=movs.slice().sort(function(a,b){return (b.dataISO||'').localeCompare(a.dataISO||'');}).slice(0,8);
+  var movsHTML=ultMovs.map(function(m){
+    return '<tr><td style="padding:6px 8px;font-size:11px;color:#64748b">'+m.data+'</td>'+
+      '<td style="padding:6px 8px;font-size:12px">'+m.desc+'</td>'+
+      '<td style="padding:6px 8px;font-size:11px;color:'+(m.tipo==='receita'?'#16a34a':'#f97316')+'">'+m.tipo+'</td>'+
+      '<td style="padding:6px 8px;font-size:12px;text-align:right;font-weight:600;color:'+(m.status==='pago'?'#16a34a':'#f97316')+'">'+fmtR(m.valor)+'</td></tr>';
+  }).join('');
+
+  // Inadimplentes
+  var inadHTML=inad.slice(0,10).map(function(m){
+    return '<tr><td style="padding:5px 8px;font-size:12px">'+m.nome+'</td>'+
+      '<td style="padding:5px 8px;font-size:11px;color:#64748b">'+m.apto+'</td>'+
+      '<td style="padding:5px 8px;font-size:12px;color:#dc2626;font-weight:600">'+fmtR(m.debito||0)+'</td></tr>';
+  }).join('');
+
+  var html='<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">'+
+    '<title>Relatório Executivo — '+cfg.nome+'</title>'+
+    '<style>*{box-sizing:border-box;margin:0;padding:0}'+
+    'body{font-family:Arial,Helvetica,sans-serif;background:#fff;color:#1e293b;font-size:13px}'+
+    '@media print{.no-print{display:none}@page{margin:15mm}}'+
+    '.header{background:#111827;color:#fff;padding:24px 32px;display:flex;justify-content:space-between;align-items:flex-start}'+
+    '.header-left h1{font-size:22px;font-weight:700;margin-bottom:4px}'+
+    '.header-left p{font-size:12px;opacity:.6}'+
+    '.header-right{text-align:right;font-size:12px;opacity:.7}'+
+    '.body{padding:28px 32px}'+
+    '.section-title{font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin:24px 0 12px;padding-bottom:6px;border-bottom:2px solid #e5e7eb}'+
+    '.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px}'+
+    '.kpi{background:#f8fafc;border-radius:8px;padding:14px;border-top:3px solid #4F46E5}'+
+    '.kpi.green{border-top-color:#059669}.kpi.red{border-top-color:#dc2626}.kpi.amber{border-top-color:#d97706}'+
+    '.kpi-lbl{font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase;margin-bottom:6px}'+
+    '.kpi-val{font-size:20px;font-weight:800;color:#1e293b}'+
+    '.kpi-sub{font-size:10px;color:#94a3b8;margin-top:3px}'+
+    'table{width:100%;border-collapse:collapse}'+
+    'th{text-align:left;padding:7px 8px;font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;border-bottom:2px solid #e5e7eb}'+
+    'tr:nth-child(even){background:#f9fafb}'+
+    '.footer{margin-top:32px;padding:16px 0;border-top:1px solid #e5e7eb;text-align:center;font-size:11px;color:#94a3b8}'+
+    '.badge-ok{background:#f0fdf4;color:#16a34a;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}'+
+    '.badge-bad{background:#fff5f5;color:#dc2626;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}'+
+    '</style></head><body>'+
+    '<div class="header">'+
+    '<div class="header-left"><h1>'+cfg.nome+'</h1><p>Relatório Executivo — '+mesesNomes[mesAtual]+'/'+anoAtual+'</p></div>'+
+    '<div class="header-right"><div style="font-size:14px;font-weight:700;opacity:1">NexCondo</div><div>Síndico: '+cfg.sindico+'</div><div>Emitido em: '+hoje.toLocaleDateString('pt-BR')+'</div></div>'+
+    '</div>'+
+    '<div class="body">'+
+    '<div class="section-title">Resumo financeiro</div>'+
+    '<div class="kpi-row">'+
+    '<div class="kpi green"><div class="kpi-lbl">Saldo em caixa</div><div class="kpi-val">'+fmtR(saldoGeral)+'</div><div class="kpi-sub">acumulado geral</div></div>'+
+    '<div class="kpi"><div class="kpi-lbl">Receitas '+mesesNomes[mesAtual]+'</div><div class="kpi-val">'+fmtR(recMes)+'</div><div class="kpi-sub">pagas no mês</div></div>'+
+    '<div class="kpi amber"><div class="kpi-lbl">Despesas '+mesesNomes[mesAtual]+'</div><div class="kpi-val">'+fmtR(despMes)+'</div><div class="kpi-sub">pagas no mês</div></div>'+
+    '<div class="kpi '+(inad.length>0?'red':'green')+'"><div class="kpi-lbl">Adimplência</div><div class="kpi-val">'+adimPct+'%</div><div class="kpi-sub">'+inad.length+' inadimplente(s)</div></div>'+
+    '</div>'+
+    '<div class="section-title">Últimas movimentações</div>'+
+    '<table><thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th style="text-align:right">Valor</th></tr></thead>'+
+    '<tbody>'+movsHTML+'</tbody></table>'+
+    (inad.length?
+      '<div class="section-title">Inadimplentes ('+inad.length+')</div>'+
+      '<table><thead><tr><th>Morador</th><th>Unidade</th><th>Débito</th></tr></thead>'+
+      '<tbody>'+inadHTML+'</tbody></table>':'')+
+    '<div class="section-title">Moradores</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'+
+    '<div class="kpi"><div class="kpi-lbl">Total de unidades</div><div class="kpi-val">'+mors.length+'</div></div>'+
+    '<div class="kpi green"><div class="kpi-lbl">Adimplentes</div><div class="kpi-val">'+(mors.length-inad.length)+'</div></div>'+
+    '<div class="kpi red"><div class="kpi-lbl">Inadimplentes</div><div class="kpi-val">'+inad.length+'</div></div>'+
+    '</div>'+
+    '<div class="footer">Relatório gerado pelo NexCondo em '+hoje.toLocaleString('pt-BR')+' · '+cfg.nome+'</div>'+
+    '</div>'+
+    '<div class="no-print" style="padding:16px 32px;display:flex;gap:8px">'+
+    '<button onclick="window.print()" style="background:#111827;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer">🖨️ Imprimir / Salvar PDF</button>'+
+    '<button onclick="window.close()" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer">Fechar</button>'+
+    '</div></body></html>';
+
+  var w=window.open('','_blank','width=900,height=800');
+  if(w){w.document.write(html);w.document.close();}
+}
+
+// ===== NOTIFICAÇÕES WHATSAPP =====
+function enviarNotificacaoWA(tipo,dados){
+  var cfg=getConfig();
+  var pix=DB.get('pix')||{};
+  var tel=(dados.telefone||'').replace(/\D/g,'');
+  if(!tel)return null;
+  var msgs={
+    cobranca:'Olá, *'+dados.nome+'*! 👋\n\n📢 *'+cfg.nome+'*\n\n💰 *Cobrança de taxa condominial*\n📅 Referência: '+dados.ref+'\n💵 Valor: *R$ '+dados.valor+'*\n📆 Vencimento: '+dados.venc+'\n\n'+
+      (pix.chave?'✅ *Pague via Pix:*\nChave: `'+pix.chave+'`\nFavorecido: '+pix.nome+'\n\n':'')+'Qualquer dúvida, entre em contato com a administração.\n\n_NexCondo · '+cfg.nome+'_',
+    aviso:'📢 *Comunicado — '+cfg.nome+'*\n\n'+dados.mensagem+'\n\nAtenciosamente,\n*'+cfg.sindico+'*\n_NexCondo · '+cfg.nome+'_',
+    encomenda:'📦 *'+cfg.nome+'*\n\nOlá, *'+dados.nome+'*!\n\nVocê tem uma encomenda aguardando na portaria.\n📅 Chegou em: '+dados.data+'\n📋 Descrição: '+dados.descricao+'\n\nPasse na portaria para retirar.\n\n_NexCondo · '+cfg.nome+'_',
+    inadimplencia:'Olá, *'+dados.nome+'*,\n\n⚠️ *Notificação de inadimplência — '+cfg.nome+'*\n\nIdentificamos débito(s) em aberto:\n💰 Total: *R$ '+dados.debito+'*\n\nSolicitamos a regularização o quanto antes para evitar medidas adicionais.\n\n'+
+      (pix.chave?'✅ Pague via Pix: `'+pix.chave+'`\n\n':'')+'Em caso de dúvidas, fale conosco.\n\n_NexCondo · '+cfg.nome+'_',
+  };
+  var msg=msgs[tipo]||dados.mensagem||'';
+  return 'https://wa.me/55'+tel+'?text='+encodeURIComponent(msg);
+}
+
+function abrirWACobranca(morId){
+  var mor=getMoradores().find(function(m){return m.id===morId;});
+  if(!mor||!mor.telefone){alert('Este morador não tem telefone cadastrado.');return;}
+  var pix=DB.get('pix')||{};
+  var hoje=new Date();
+  var venc=new Date(hoje.getFullYear(),hoje.getMonth()+1,5).toLocaleDateString('pt-BR');
+  var ref=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][hoje.getMonth()]+'/'+hoje.getFullYear();
+  var url=enviarNotificacaoWA('cobranca',{
+    nome:mor.nome, telefone:mor.telefone,
+    ref:ref, valor:Number(pix.taxa||0).toLocaleString('pt-BR',{minimumFractionDigits:2}), venc:venc
+  });
+  if(url)window.open(url,'_blank');
+}
+
+function abrirWAAviso(mensagem){
+  var cfg=getConfig();
+  var tel=cfg.telefone||'';
+  if(!tel){alert('Configure o telefone do síndico em Configurações.');return;}
+  var url=enviarNotificacaoWA('aviso',{telefone:tel,mensagem:mensagem,sindico:cfg.sindico});
+  if(url)window.open(url,'_blank');
+}
+
+function enviarWAInadimplentes(){
+  var inad=getMoradores().filter(function(m){return m.status==='inadimplente'&&m.telefone;});
+  if(!inad.length){alert('Nenhum inadimplente com telefone cadastrado.');return;}
+  if(!confirm('Enviar cobrança via WhatsApp para '+inad.length+' inadimplente(s)?'))return;
+  inad.forEach(function(m,i){
+    setTimeout(function(){
+      var url=enviarNotificacaoWA('inadimplencia',{
+        nome:m.nome, telefone:m.telefone,
+        debito:Number(m.debito||0).toLocaleString('pt-BR',{minimumFractionDigits:2})
+      });
+      if(url)window.open(url,'_blank');
+    },i*1000);
+  });
+  toast('📱 Abrindo WhatsApp para '+inad.length+' moradores...');
+}
+
 function doLogin(){
   var user=document.getElementById('login-user').value.trim();
   var pass=document.getElementById('login-pass').value;
@@ -5683,7 +5993,8 @@ function doLogin(){
       sincronizarDoServidor();
     }
     if(!cfg.nome||cfg.nome==='Meu Condomínio'){
-      navigate('configuracoes');
+      // Primeira vez — iniciar onboarding
+      setTimeout(function(){iniciarOnboarding();},300);
     } else {
       setTimeout(function(){navigate('painel');},100);
     }
@@ -5842,7 +6153,8 @@ function _modalUsuario(usr){
     '<div><label class="form-label">E-mail (login)</label><input id="m-usr-email" class="form-input" type="email" value="'+(usr?usr.email:'')+'" placeholder="usuario@email.com"></div>'+
     '</div>'+
     '<div class="form-row">'+
-    '<div><label class="form-label">'+(isNovo?'Senha':'Nova senha (deixe em branco para manter)')+'</label><input id="m-usr-senha" class="form-input" type="password" placeholder="'+(isNovo?'Mínimo 6 caracteres':'Deixe em branco para não alterar')+'"></div>'+
+    '<div><label class="form-label">'+(isNovo?'Senha de acesso':'Alterar senha')+'</label>'+
+    '<input id="m-usr-senha" class="form-input" type="password" placeholder="'+(isNovo?'Mínimo 6 caracteres':'Digite apenas se quiser trocar a senha')+'"></div>'+
     '<div><label class="form-label">Perfil</label>'+
     '<select id="m-usr-perfil" class="form-select" onchange="_preencherPermissoesPerfil(this.value)">'+perfilOpts+'</select></div>'+
     '</div>'+
