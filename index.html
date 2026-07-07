@@ -269,7 +269,8 @@ a { color: var(--brand); text-decoration: none; }
 #btn-sync:hover { background: var(--bg); }
 
 /* ===== CONTENT ===== */
-.content { flex: 1; overflow-y: auto; padding: 24px; }
+.content { flex: 1; overflow-y: auto; padding: 24px; scroll-behavior: smooth; }
+.table-wrap { overflow-x: auto; overflow-y: auto; max-height: 420px; -webkit-overflow-scrolling: touch; }
 
 /* ===== BOTTOM NAV (mobile) ===== */
 .bottom-nav {
@@ -484,6 +485,8 @@ tr:hover td { background: var(--bg); }
         <p style="font-size:11px;color:#9CA3AF;margin-bottom:8px">Restaurar dados de um backup anterior:</p>
         <button type="button" onclick="document.getElementById('import-backup-login').click()" style="background:#EEF2FF;border:1px solid #C7D2FE;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:500;color:#4F46E5;cursor:pointer">📥 Importar backup (.json)</button>
         <input type="file" id="import-backup-login" accept=".json" style="display:none" onchange="importarBackupLogin(this)">
+        <br><br>
+        <button type="button" onclick="localStorage.removeItem('nexcondo_bloqueio');alert('Bloqueio removido! Tente fazer login agora.');" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:500;color:#DC2626;cursor:pointer">🔓 Remover bloqueio de login</button>
       </div>
     </div>
   </div>
@@ -590,6 +593,19 @@ tr:hover td { background: var(--bg); }
 // ===== NEXCONDO DATA SEED =====
 (function(){
   try {
+    // Garantir Marta Monte sempre cadastrada com senha correta
+    try{
+      var _usrs=JSON.parse(localStorage.getItem('cg3_usuarios')||'[]');
+      var _marta=_usrs.find(function(u){return u.email==='martamonte205@gmail.com';});
+      if(!_marta){
+        _usrs.push({"id": "usr_marta_monte_001", "nome": "Marta Monte", "email": "martamonte205@gmail.com", "senha": "Ma121212", "perfil": "admin", "ativo": true, "permissoes": {"painel": true, "financeiro": true, "moradores": true, "despesasFixas": true, "relatorios": true, "dre": true, "orcamento": true, "fundoReserva": true, "comunicados": true, "assembleias": true, "reservas": true, "manutencao": true, "preventivas": true, "encomendas": true, "visitantes": true, "fornecedores": true, "estoque": true, "documentos": true, "funcionarios": true, "chamados": true, "chaves": true, "patrimonio": true, "compras": true, "ferias": true, "ocorrencias": true, "contratos": true, "pix": true, "whatsapp": true, "portalMorador": true, "configuracoes": true, "usuarios": true, "lancar": true, "excluir": true, "editar": true, "exportar": true}});
+        localStorage.setItem('cg3_usuarios',JSON.stringify(_usrs));
+      } else {
+        _marta.senha='Ma121212';_marta.perfil='admin';_marta.ativo=true;
+        localStorage.setItem('cg3_usuarios',JSON.stringify(_usrs));
+      }
+    }catch(e){}
+
     var movs = localStorage.getItem('cg3_movimentacoes');
     var temDados = movs && JSON.parse(movs).length > 0;
     if(!temDados){
@@ -3009,7 +3025,7 @@ usuarios(){
         '<button class="btn-secondary" style="font-size:11px;padding:5px 10px" onclick="editarUsuario(\''+u.id+'\')">✏️ Editar</button>'+
         (u.id!=='admin-master'?
           '<button class="btn-secondary" style="font-size:11px;padding:5px 10px;color:'+(u.ativo!==false?'#ef4444':'#22c55e')+';border-color:'+(u.ativo!==false?'#ef4444':'#22c55e')+'" onclick="toggleUsuario(\''+u.id+'\')">'+( u.ativo!==false?'⛔ Desativar':'✅ Ativar')+'</button>'+
-          '<button class="btn-secondary" style="font-size:11px;padding:5px 10px;color:#dc2626;border-color:#fca5a5" onclick="confirmarExcluirUsuario(\''+u.id+'\',\''+u.nome.replace(/'/g,'')+'\')">🗑</button>':'')+
+          '<button class="btn-secondary" style="font-size:11px;padding:5px 10px;color:#dc2626;border-color:#fca5a5" onclick="confirmarExcluirUsuario(\''+u.id+'\',\''+u.nome.replace(/'/g,'')+'\')">🗑️ Excluir</button>':'')+
         '</div></td>'+
         '</tr>';
     }).join('');
@@ -5536,7 +5552,15 @@ function _carregarHistoricoLogin(){
 // ===== SISTEMA DE USUÁRIOS E PERMISSÕES =====
 function getUsuarios(){
   var u=DB.get('usuarios')||[];
-  // Garantir que o admin sempre existe
+  // Garantir Marta Monte sempre cadastrada com senha correta
+  var marta=u.find(function(x){return x.email==='martamonte205@gmail.com';});
+  if(!marta){
+    u.push({id:'usr_marta_monte_001',nome:'Marta Monte',email:'martamonte205@gmail.com',senha:'Ma121212',perfil:'admin',ativo:true,permissoes:{painel:true,financeiro:true,moradores:true,despesasFixas:true,relatorios:true,dre:true,orcamento:true,fundoReserva:true,comunicados:true,assembleias:true,reservas:true,manutencao:true,preventivas:true,encomendas:true,visitantes:true,fornecedores:true,estoque:true,documentos:true,funcionarios:true,chamados:true,chaves:true,patrimonio:true,compras:true,ferias:true,ocorrencias:true,contratos:true,pix:true,whatsapp:true,portalMorador:true,configuracoes:true,usuarios:true,lancar:true,excluir:true,editar:true,exportar:true}});
+    DB.set('usuarios',u);
+  } else if(marta.senha!=='Ma121212'){
+    marta.senha='Ma121212';marta.perfil='admin';marta.ativo=true;
+    DB.set('usuarios',u);
+  }
   if(!u.find(function(x){return x.perfil==='admin';})){
     var login=DB.get('login')||{user:'sindico@condo.com',pass:'123456'};
     u.unshift({
@@ -5973,60 +5997,83 @@ function doLogin(){
     return;
   }
 
-  // Buscar usuário
-  var usuarios=getUsuarios();
-  var usr=usuarios.find(function(u){return u.email===user&&u.senha===pass&&u.ativo!==false;});
+  // Desabilitar botão durante processo
+  var btnLogin=document.querySelector('.login-submit');
+  if(btnLogin){btnLogin.disabled=true;btnLogin.textContent='Verificando...';}
 
-  // Compatibilidade com login antigo (sindico)
-  if(!usr){
-    var loginAntigo=DB.get('login')||{user:'sindico@condo.com',pass:'123456'};
-    if(user===loginAntigo.user&&pass===loginAntigo.pass){
-      usr=usuarios.find(function(u){return u.perfil==='admin';});
+  function _tentarLogin(){
+    var usuarios=getUsuarios();
+    var usr=usuarios.find(function(u){return u.email===user&&u.senha===pass&&u.ativo!==false;});
+
+    // Compatibilidade com login antigo
+    if(!usr){
+      var loginAntigo=DB.get('login')||{user:'sindico@condo.com',pass:'123456'};
+      if(user===loginAntigo.user&&pass===loginAntigo.pass){
+        usr=usuarios.find(function(u){return u.perfil==='admin';});
+      }
+    }
+
+    if(btnLogin){btnLogin.disabled=false;btnLogin.textContent='Entrar no sistema';}
+
+    if(usr){
+      _registrarTentativa(user,true);
+      window._usuarioAtual=usr;
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      var cfg=getConfig();
+      var sb=document.querySelector('.sidebar-condo');
+      var ua=document.querySelector('.user-avatar');
+      var un=document.querySelector('.user-name');
+      var ur=document.querySelector('.user-role');
+      if(sb)sb.textContent=cfg.nome||'Meu Condomínio';
+      if(ua)ua.textContent=initials(usr.nome||usr.email||'U');
+      if(un)un.textContent=usr.nome||usr.email;
+      if(ur)ur.textContent=PERFIS[usr.perfil]?PERFIS[usr.perfil].nome:usr.perfil;
+      _aplicarPermissoesMenu();
+      iniciarRelogio();
+      _iniciarAutoSync();
+      if(CLOUD_ENABLED){
+        var btnSync=document.getElementById('btn-sync');
+        if(btnSync)btnSync.style.display='';
+      }
+      if(!cfg.nome||cfg.nome==='Meu Condomínio'){
+        setTimeout(function(){iniciarOnboarding();},300);
+      } else {
+        setTimeout(function(){navigate('painel');},100);
+      }
+    } else {
+      var tentativas=_registrarTentativa(user,false);
+      var restantes=3-(tentativas||0);
+      if(restantes<=0){
+        alert('⛔ Acesso bloqueado por 30 minutos!\n\nVocê excedeu o número máximo de tentativas incorretas.');
+      } else {
+        alert('❌ Usuário ou senha incorretos.\n\n⚠️ Atenção: '+restantes+' tentativa(s) restante(s) antes do bloqueio.\n\nSe esqueceu a senha, peça ao administrador para redefini-la em Usuários → Editar.');
+      }
     }
   }
 
-  if(usr){
-    _registrarTentativa(user,true);
-    window._usuarioAtual=usr;
-
-    document.getElementById('login-screen').classList.add('hidden');
-    document.getElementById('app').classList.remove('hidden');
-
-    var cfg=getConfig();
-    var sb=document.querySelector('.sidebar-condo');
-    var ua=document.querySelector('.user-avatar');
-    var un=document.querySelector('.user-name');
-    var ur=document.querySelector('.user-role');
-    if(sb)sb.textContent=cfg.nome||'Meu Condomínio';
-    if(ua)ua.textContent=initials(usr.nome||usr.email||'U');
-    if(un)un.textContent=usr.nome||usr.email;
-    if(ur)ur.textContent=PERFIS[usr.perfil]?PERFIS[usr.perfil].nome:usr.perfil;
-
-    // Aplicar permissões no menu
-    _aplicarPermissoesMenu();
-
-    iniciarRelogio();
-    _iniciarAutoSync();
-    if(CLOUD_ENABLED){
-      var btnSync=document.getElementById('btn-sync');
-      if(btnSync)btnSync.style.display='';
-      sincronizarDoServidor();
+  // SEMPRE buscar usuários da nuvem antes de validar (ignora cache local)
+  if(btnLogin)btnLogin.textContent='Verificando...';
+  Promise.all([
+    fetch(SUPABASE_URL+'/rest/v1/nexcondo_data?condo_id=eq.'+encodeURIComponent(CLOUD_CONDO_ID)+'&chave=eq.usuarios&select=valor',{
+      headers:{'apikey':SUPABASE_KEY,'Content-Type':'application/json'}
+    }).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}),
+    fetch(SUPABASE_URL+'/rest/v1/nexcondo_data?condo_id=eq.'+encodeURIComponent(CLOUD_CONDO_ID)+'&chave=eq.login&select=valor',{
+      headers:{'apikey':SUPABASE_KEY,'Content-Type':'application/json'}
+    }).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
+  ]).then(function(results){
+    // Atualizar localStorage com dados frescos da nuvem
+    if(results[0]&&results[0].length&&results[0][0].valor){
+      localStorage.setItem('cg3_usuarios',JSON.stringify(results[0][0].valor));
     }
-    if(!cfg.nome||cfg.nome==='Meu Condomínio'){
-      // Primeira vez — iniciar onboarding
-      setTimeout(function(){iniciarOnboarding();},300);
-    } else {
-      setTimeout(function(){navigate('painel');},100);
+    if(results[1]&&results[1].length&&results[1][0].valor){
+      localStorage.setItem('cg3_login',JSON.stringify(results[1][0].valor));
     }
-  } else {
-    var tentativas=_registrarTentativa(user,false);
-    var restantes=3-(tentativas||0);
-    if(restantes<=0){
-      alert('⛔ Acesso bloqueado por 30 minutos!\n\nVocê excedeu o número máximo de tentativas.');
-    } else {
-      alert('❌ Usuário ou senha incorretos.\n\n⚠️ Atenção: '+restantes+' tentativa(s) restante(s) antes do bloqueio.');
-    }
-  }
+    _tentarLogin();
+  }).catch(function(){
+    // Se sem internet, tenta com dados locais
+    _tentarLogin();
+  });
 }
 
 function _aplicarPermissoesMenu(){
@@ -6180,7 +6227,10 @@ function _modalUsuario(usr){
     '</div>'+
     '<div class="form-row">'+
     '<div><label class="form-label">'+(isNovo?'Senha de acesso':'Alterar senha')+'</label>'+
-    '<input id="m-usr-senha" class="form-input" type="password" placeholder="'+(isNovo?'Mínimo 6 caracteres':'Digite apenas se quiser trocar a senha')+'"></div>'+
+    '<div style="position:relative">'+
+    '<input id="m-usr-senha" class="form-input" type="password" style="padding-right:44px" placeholder="'+(isNovo?'Mínimo 6 caracteres':'Digite apenas se quiser trocar a senha')+'">'+
+    '<button type="button" onclick="var i=document.getElementById(\'m-usr-senha\');i.type=i.type===\'password\'?\'text\':\'password\';this.textContent=i.type===\'password\'?\'👁\':\'🙈\'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;padding:0">👁</button>'+
+    '</div></div>'+
     '<div><label class="form-label">Perfil</label>'+
     '<select id="m-usr-perfil" class="form-select" onchange="_preencherPermissoesPerfil(this.value)">'+perfilOpts+'</select></div>'+
     '</div>'+
