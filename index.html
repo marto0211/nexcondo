@@ -5552,13 +5552,10 @@ function _carregarHistoricoLogin(){
 // ===== SISTEMA DE USUÁRIOS E PERMISSÕES =====
 function getUsuarios(){
   var u=DB.get('usuarios')||[];
-  // Garantir Marta Monte sempre cadastrada com senha correta
+  // Garantir Marta Monte cadastrada (só se não existir)
   var marta=u.find(function(x){return x.email==='martamonte205@gmail.com';});
   if(!marta){
     u.push({id:'usr_marta_monte_001',nome:'Marta Monte',email:'martamonte205@gmail.com',senha:'Ma121212',perfil:'admin',ativo:true,permissoes:{painel:true,financeiro:true,moradores:true,despesasFixas:true,relatorios:true,dre:true,orcamento:true,fundoReserva:true,comunicados:true,assembleias:true,reservas:true,manutencao:true,preventivas:true,encomendas:true,visitantes:true,fornecedores:true,estoque:true,documentos:true,funcionarios:true,chamados:true,chaves:true,patrimonio:true,compras:true,ferias:true,ocorrencias:true,contratos:true,pix:true,whatsapp:true,portalMorador:true,configuracoes:true,usuarios:true,lancar:true,excluir:true,editar:true,exportar:true}});
-    DB.set('usuarios',u);
-  } else if(marta.senha!=='Ma121212'){
-    marta.senha='Ma121212';marta.perfil='admin';marta.ativo=true;
     DB.set('usuarios',u);
   }
   if(!u.find(function(x){return x.perfil==='admin';})){
