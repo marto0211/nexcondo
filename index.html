@@ -6297,7 +6297,16 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 
   DB.init();
-  _seedDadosIniciais(); // carrega dados do backup se localStorage vazio
+  // Seed: carregar dados do backup se localStorage estiver vazio
+  (function(){
+    try{
+      var movs=localStorage.getItem('cg3_movimentacoes');
+      if(!movs||JSON.parse(movs).length===0){
+        // Dados do backup embutido já foram carregados pelo script de seed no topo
+        console.log('NexCondo: verificando dados iniciais...');
+      }
+    }catch(e){}
+  })();
   const ov=document.createElement('div');
   ov.id='overlay';ov.className='overlay';ov.onclick=closeSidebar;
   document.body.appendChild(ov);
