@@ -416,6 +416,14 @@ tr:hover td { background: var(--bg); }
 @media (max-width: 900px) {
   .content { padding: 8px; }
 }
+@media (max-width: 768px) {
+  /* KPIs: 2 por linha no mobile */
+  .painel-kpi-grid { grid-template-columns: 1fr 1fr !important; }
+  /* Gráficos: coluna única no mobile */
+  .painel-graf-grid { grid-template-columns: 1fr !important; }
+  /* Movimentações: coluna única no mobile */
+  .painel-mov-grid { grid-template-columns: 1fr !important; }
+}
 
 /* ===== MODAL ===== */
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; display: none; backdrop-filter: blur(2px); }
@@ -1376,7 +1384,7 @@ painel(){
     '</div></div></div>'+
 
     // ── LINHA 1: 4 KPIs + CALENDÁRIO ──────────────────────────
-    '<div style="display:grid;grid-template-columns:repeat(4,1fr) 1.3fr;gap:8px;margin-bottom:8px">'+
+    '<div class="painel-kpi-grid" style="display:grid;grid-template-columns:repeat(4,1fr) 1.3fr;gap:8px;margin-bottom:8px">'+
     // KPI Receitas
     '<div style="'+cs+';border-top:3px solid #2196F3">'+
     '<div style="font-size:9px;color:var(--text4);text-transform:uppercase;font-weight:700;letter-spacing:.05em;margin-bottom:4px">Receitas mês</div>'+
@@ -1402,7 +1410,7 @@ painel(){
     '</div>'+
 
     // ── LINHA 2: GRÁFICO | RECEITAS TIPO | ADIMPLÊNCIA | ALERTAS ──
-    '<div style="display:grid;grid-template-columns:2.2fr 1fr 0.6fr 1fr;gap:8px;margin-bottom:8px">'+
+    '<div class="painel-graf-grid" style="display:grid;grid-template-columns:2.2fr 1fr 0.6fr 1fr;gap:8px;margin-bottom:8px">'+
     // Gráfico
     '<div style="'+cs+'">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
@@ -1446,7 +1454,7 @@ painel(){
     '</div>'+
 
     // ── LINHA 3: MOVIMENTAÇÕES | CHAMADOS | ATALHOS ────────────
-    '<div style="display:grid;grid-template-columns:1.4fr 1fr 0.8fr;gap:8px">'+
+    '<div class="painel-mov-grid" style="display:grid;grid-template-columns:1.4fr 1fr 0.8fr;gap:8px">'+
     // Movimentações
     '<div style="'+cs+'">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
