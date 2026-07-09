@@ -417,12 +417,16 @@ tr:hover td { background: var(--bg); }
   .content { padding: 8px; }
 }
 @media (max-width: 768px) {
-  /* KPIs: 2 por linha no mobile */
+  /* KPIs: 2 por linha, ocultar calendário */
   .painel-kpi-grid { grid-template-columns: 1fr 1fr !important; }
-  /* Gráficos: coluna única no mobile */
+  .painel-cal { display: none !important; }
+  /* Gráficos: coluna única */
   .painel-graf-grid { grid-template-columns: 1fr !important; }
-  /* Movimentações: coluna única no mobile */
+  /* Movimentações: coluna única */
   .painel-mov-grid { grid-template-columns: 1fr !important; }
+  /* Fontes menores nos KPIs */
+  .painel-kpi-grid > div > div:first-child { font-size: 8px !important; }
+  .painel-kpi-grid > div > div:nth-child(2) { font-size: 15px !important; }
 }
 
 /* ===== MODAL ===== */
@@ -1386,27 +1390,27 @@ painel(){
     // ── LINHA 1: 4 KPIs + CALENDÁRIO ──────────────────────────
     '<div class="painel-kpi-grid" style="display:grid;grid-template-columns:repeat(4,1fr) 1.3fr;gap:8px;margin-bottom:8px">'+
     // KPI Receitas
-    '<div style="'+cs+';border-top:3px solid #2196F3">'+
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;border-top:3px solid #2196F3">'+
     '<div style="font-size:9px;color:var(--text4);text-transform:uppercase;font-weight:700;letter-spacing:.05em;margin-bottom:4px">Receitas mês</div>'+
     '<div style="font-size:18px;font-weight:800;color:var(--text);line-height:1">'+fmtR(k.receitas)+'</div>'+
     '<div style="font-size:10px;color:var(--text4);margin-top:3px">acum: '+fmtR(k.receitasTotal||0)+'</div></div>'+
     // KPI Despesas
-    '<div style="'+cs+';border-top:3px solid #FF9800">'+
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;border-top:3px solid #FF9800">'+
     '<div style="font-size:9px;color:var(--text4);text-transform:uppercase;font-weight:700;letter-spacing:.05em;margin-bottom:4px">Despesas mês</div>'+
     '<div style="font-size:18px;font-weight:800;color:var(--text);line-height:1">'+fmtR(k.despesas)+'</div>'+
     '<div style="font-size:10px;color:var(--text4);margin-top:3px">acum: '+fmtR(k.despesasTotal||0)+'</div></div>'+
     // KPI A Receber
-    '<div style="'+cs+';border-top:3px solid #FFD740">'+
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;border-top:3px solid #FFD740">'+
     '<div style="font-size:9px;color:var(--text4);text-transform:uppercase;font-weight:700;letter-spacing:.05em;margin-bottom:4px">A Receber</div>'+
     '<div style="font-size:18px;font-weight:800;color:#D97706;line-height:1">'+fmtR(aReceber)+'</div>'+
     '<div style="font-size:10px;color:var(--text4);margin-top:3px">pendente total</div></div>'+
     // KPI Inadimplentes
-    '<div style="'+cs+';border-top:3px solid '+(k.inadimplentes>0?'#DC2626':'#059669')+'">'+
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;border-top:3px solid '+(k.inadimplentes>0?'#DC2626':'#059669')+'">'+
     '<div style="font-size:9px;color:var(--text4);text-transform:uppercase;font-weight:700;letter-spacing:.05em;margin-bottom:4px">Inadimplentes</div>'+
     '<div style="font-size:18px;font-weight:800;color:'+(k.inadimplentes>0?'#DC2626':'#059669')+';line-height:1">'+k.inadimplentes+'</div>'+
     '<div style="font-size:10px;color:var(--text4);margin-top:3px">'+k.adimplencia+'% adimplência</div></div>'+
-    // Calendário
-    '<div style="'+cs+'">'+cal+'</div>'+
+    // Calendário — oculto no mobile via CSS
+    '<div class="painel-cal" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px">'+cal+'</div>'+
     '</div>'+
 
     // ── LINHA 2: GRÁFICO | RECEITAS TIPO | ADIMPLÊNCIA | ALERTAS ──
