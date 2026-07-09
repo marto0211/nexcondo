@@ -406,8 +406,16 @@ tr:hover td { background: var(--bg); }
 .topbar-title { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -.01em; }
 .topbar-sub { font-size: 11px; color: var(--text4); margin-top: 1px; font-weight: 500; }
 .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-.content { flex: 1; overflow-y: auto; padding: 14px; scroll-behavior: smooth; min-height: 0; }
+.content { flex: 1; overflow-y: auto; padding: 12px; scroll-behavior: smooth; min-height: 0; }
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* Painel responsivo */
+@media (max-width: 1200px) {
+  .content { padding: 10px; }
+}
+@media (max-width: 900px) {
+  .content { padding: 8px; }
+}
 
 /* ===== MODAL ===== */
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; display: none; backdrop-filter: blur(2px); }
@@ -1274,17 +1282,13 @@ painel(){
   var cfg=getConfig(),k=calcKpis(),movs=getMovimentacoes();
   var manut=getManutencoes().filter(function(m){return m.status!=='concluído';}).slice(0,3);
   var enc=getEncomendas().filter(function(e){return e.status!=='retirado';}).length;
-  var prev=getPreventivas().filter(function(p){if(!p.proximaISO)return false;var d=new Date(p.proximaISO),hj=new Date();return (d-hj)/(1000*60*60*24)<=30;}).length;
-  var ouv=getOuvidoria().filter(function(o){return o.status==='aberto';}).length;
   var fmtR=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});};
-  var fmtK=function(n){return n>=1000?'R$ '+(n/1000).toFixed(1)+'k':'R$ '+n.toFixed(0);};
   var saldoCaixa=k.saldoCaixa||0;
   var aReceber=k.aReceber||0;
   var hoje2=new Date();
 
-  // Gráfico linha compacto (últimos 6 meses)
-  var mesesLabels=[];
-  var recArr=[];var despArr=[];
+  // ===== GRÁFICO LINHA =====
+  var mesesLabels=[];var recArr=[];var despArr=[];
   for(var mm=5;mm>=0;mm--){
     var d=new Date(hoje2.getFullYear(),hoje2.getMonth()-mm,1);
     mesesLabels.push(['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][d.getMonth()]);
@@ -1301,171 +1305,181 @@ painel(){
     recArr.push(r);despArr.push(de);
   }
   var maxV=Math.max.apply(null,recArr.concat(despArr).concat([1]));
-  var W=340,H=70,PAD=24;
-  var pts=function(arr){return arr.map(function(v,i){return [(PAD+i*(W-PAD*2)/5),(H-Math.round(v/maxV*(H-10))+2)].join(',');}).join(' ');};
-  var grafLinha='<svg width="100%" viewBox="0 0 '+W+' '+(H+20)+'" xmlns="http://www.w3.org/2000/svg" style="overflow:visible">'+
+  var W=300,H=65,PAD=20;
+  var pts=function(arr){return arr.map(function(v,i){return [(PAD+i*(W-PAD*2)/5).toFixed(1),(H-Math.round(v/maxV*(H-8))+2).toFixed(1)].join(',');}).join(' ');};
+  var grafLinha='<svg width="100%" viewBox="0 0 '+W+' '+(H+18)+'" xmlns="http://www.w3.org/2000/svg">'+
     '<polyline points="'+pts(recArr)+'" fill="none" stroke="#2196F3" stroke-width="2" stroke-linejoin="round"/>'+
     '<polyline points="'+pts(despArr)+'" fill="none" stroke="#FF9800" stroke-width="2" stroke-linejoin="round"/>'+
-    mesesLabels.map(function(l,i){return '<text x="'+(PAD+i*(W-PAD*2)/5)+'" y="'+(H+14)+'" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="Arial">'+l+'</text>';}).join('')+
+    mesesLabels.map(function(l,i){return '<text x="'+(PAD+i*(W-PAD*2)/5).toFixed(1)+'" y="'+(H+14)+'" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="Arial">'+l+'</text>';}).join('')+
     '</svg>';
 
-  // Donut adimplência compacto
+  // ===== DONUT =====
   var adimN=Math.round(Number(k.adimplencia||100));
-  var inadN=100-adimN;
-  var r2=28,circ=2*Math.PI*r2;
-  var dashOk=circ*adimN/100,dashBad=circ-dashOk;
-  var donut='<svg width="70" height="70" viewBox="0 0 70 70"><circle cx="35" cy="35" r="'+r2+'" fill="none" stroke="#E2E8F0" stroke-width="7"/>'+
-    '<circle cx="35" cy="35" r="'+r2+'" fill="none" stroke="#2196F3" stroke-width="7" stroke-dasharray="'+dashOk+' '+dashBad+'" stroke-dashoffset="'+circ*0.25+'" stroke-linecap="round"/>'+
-    (inadN>0?'<circle cx="35" cy="35" r="'+r2+'" fill="none" stroke="#FF9800" stroke-width="7" stroke-dasharray="'+dashBad+' '+dashOk+'" stroke-dashoffset="'+(circ*0.25-dashOk)+'" stroke-linecap="round"/>':'')+
-    '<text x="35" y="39" text-anchor="middle" fill="#0F172A" font-size="12" font-weight="700" font-family="Arial">'+adimN+'%</text></svg>';
+  var r2=24,circ=2*Math.PI*r2;
+  var dashOk=circ*adimN/100;
+  var donut='<svg width="60" height="60" viewBox="0 0 60 60">'+
+    '<circle cx="30" cy="30" r="'+r2+'" fill="none" stroke="#E2E8F0" stroke-width="6"/>'+
+    '<circle cx="30" cy="30" r="'+r2+'" fill="none" stroke="#2196F3" stroke-width="6" stroke-dasharray="'+dashOk.toFixed(1)+' '+(circ-dashOk).toFixed(1)+'" stroke-dashoffset="'+(circ*0.25).toFixed(1)+'" stroke-linecap="round"/>'+
+    '<text x="30" y="35" text-anchor="middle" fill="#0F172A" font-size="11" font-weight="700" font-family="Arial">'+adimN+'%</text></svg>';
 
-  // Movimentações recentes compactas
-  var movs5=movs.slice().sort(function(a,b){return (b.dataISO||'').localeCompare(a.dataISO||'');}).slice(0,4);
-  var movHTML=movs5.length?movs5.map(function(m){
+  // ===== MOVIMENTAÇÕES =====
+  var movs4=movs.slice().sort(function(a,b){return (b.dataISO||'').localeCompare(a.dataISO||'');}).slice(0,4);
+  var movHTML=movs4.length?movs4.map(function(m){
     var isRec=m.tipo==='receita';
-    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">'+
-      '<div style="width:28px;height:28px;border-radius:8px;background:'+(isRec?'#E3F2FD':'#FFF3E0')+';display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">'+(isRec?'💰':'💸')+'</div>'+
-      '<div style="flex:1;min-width:0">'+
-      '<div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.desc+'</div>'+
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">'+
+      '<div style="width:26px;height:26px;border-radius:7px;background:'+(isRec?'#E3F2FD':'#FFF3E0')+';display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0">'+(isRec?'💰':'💸')+'</div>'+
+      '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.desc+'</div>'+
       '<div style="font-size:10px;color:var(--text4)">'+m.data+'</div></div>'+
-      '<div style="font-size:12px;font-weight:700;color:'+(isRec?'#059669':'#DC2626')+'">'+(isRec?'+':'-')+fmtR(m.valor)+'</div>'+
-      '</div>';
-  }).join(''):'<div style="padding:12px 0;text-align:center;color:var(--text4);font-size:12px">Nenhuma movimentação</div>';
+      '<div style="font-size:12px;font-weight:700;color:'+(isRec?'#059669':'#DC2626')+';white-space:nowrap">'+(isRec?'+':'-')+fmtR(m.valor)+'</div></div>';
+  }).join(''):'<div style="padding:10px 0;text-align:center;color:var(--text4);font-size:12px">Sem movimentações</div>';
 
-  // Alertas de decisão compactos
+  // ===== ALERTAS =====
   var alertas=[];
   if(k.inadimplentes>0) alertas.push({cor:'#FF9800',ico:'⚠️',txt:k.inadimplentes+' inadimplente(s) · '+fmtR(k.debitoTotal),pg:'inadimplentes'});
   if(saldoCaixa<0) alertas.push({cor:'#DC2626',ico:'🔴',txt:'Caixa negativo: '+fmtR(Math.abs(saldoCaixa)),pg:'financeiro'});
   if(enc>0) alertas.push({cor:'#2196F3',ico:'📬',txt:enc+' encomenda(s) na portaria',pg:'encomendas'});
-  if(manut.length>0&&manut[0].prioridade==='Urgente') alertas.push({cor:'#DC2626',ico:'🔧',txt:'Chamado urgente: '+manut[0].titulo,pg:'manutencao'});
+  if(manut.filter(function(m){return m.prioridade==='Urgente';}).length>0) alertas.push({cor:'#DC2626',ico:'🔧',txt:'Chamado urgente pendente',pg:'manutencao'});
   if(alertas.length===0) alertas.push({cor:'#059669',ico:'✅',txt:'Tudo em ordem!',pg:'painel'});
 
-  var alertHTML=alertas.slice(0,3).map(function(a){
-    return '<div onclick="navigate(\''+a.pg+'\')" style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:'+a.cor+'11;border-left:3px solid '+a.cor+';border-radius:6px;cursor:pointer;margin-bottom:6px">'+
-      '<span style="font-size:14px">'+a.ico+'</span>'+
-      '<span style="font-size:12px;font-weight:500;color:var(--text2)">'+a.txt+'</span>'+
-      '</div>';
-  }).join('');
-
-  // Receitas por tipo compacto
-  var catMap={};
-  movs.forEach(function(m){
-    if(m.tipo!=='receita')return;
-    var cat=m.categoria||'Outros';
-    catMap[cat]=(catMap[cat]||0)+Number(m.valor||0);
-  });
-  var totalCat=Object.values(catMap).reduce(function(s,v){return s+v;},0)||1;
-  var barrasHoriz=Object.entries(catMap).slice(0,3).map(function(e){
-    var pct=Math.round(e[1]/totalCat*100);
-    return '<div style="margin-bottom:8px">'+
-      '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">'+
-      '<span style="color:var(--text2);font-weight:500">'+e[0]+'</span>'+
-      '<span style="color:var(--text3)">'+pct+'%</span></div>'+
-      '<div style="background:var(--border);border-radius:4px;height:6px">'+
-      '<div style="width:'+pct+'%;background:#2196F3;height:6px;border-radius:4px"></div></div></div>';
-  }).join('')||'<div style="font-size:12px;color:var(--text4)">Sem dados</div>';
-
-  // Calendário compacto
-  var cal=(function(){
-    var hoje3=new Date(),m=hoje3.getMonth(),a=hoje3.getFullYear();
-    var nomes=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-    var mNomes=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-    var primeiroDia=new Date(a,m,1).getDay();
-    var diasMes=new Date(a,m+1,0).getDate();
-    var cells='';
-    for(var i=0;i<primeiroDia;i++) cells+='<div></div>';
-    for(var d=1;d<=diasMes;d++){
-      var isHoje=d===hoje3.getDate();
-      cells+='<div style="text-align:center;font-size:10px;padding:2px;border-radius:4px;font-weight:'+(isHoje?'700':'400')+';background:'+(isHoje?'#2196F3':'transparent')+';color:'+(isHoje?'#fff':'var(--text3)')+'">'+d+'</div>';
-    }
-    return '<div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px;display:flex;justify-content:space-between"><span>◄</span><span>'+mNomes[m]+'</span><span>►</span></div>'+
-      '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">'+
-      nomes.map(function(n){return '<div style="text-align:center;font-size:9px;color:var(--text4);font-weight:600">'+n+'</div>';}).join('')+
-      '</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">'+cells+'</div>';
-  })();
+  // ===== CALENDÁRIO =====
+  var mNomes=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var diasN=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  var m2=hoje2.getMonth(),a2=hoje2.getFullYear();
+  var prim=new Date(a2,m2,1).getDay();
+  var dias=new Date(a2,m2+1,0).getDate();
+  var calCells='';
+  for(var i=0;i<prim;i++) calCells+='<div></div>';
+  for(var di=1;di<=dias;di++){
+    var isH=di===hoje2.getDate();
+    calCells+='<div style="text-align:center;font-size:10px;padding:2px 1px;border-radius:4px;background:'+(isH?'#2196F3':'transparent')+';color:'+(isH?'#fff':'var(--text3)')+';font-weight:'+(isH?'700':'400')+'">'+di+'</div>';
+  }
+  var cal='<div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">'+
+    '<span>◄</span><span>'+mNomes[m2]+' '+a2+'</span><span>►</span></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:3px">'+
+    diasN.map(function(n){return '<div style="text-align:center;font-size:9px;color:var(--text4);font-weight:600">'+n+'</div>';}).join('')+'</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px">'+calCells+'</div>';
 
   var cs='background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px';
 
   return (
-    // Banner saldo — compacto
-    '<div style="background:linear-gradient(135deg,#1565C0,#1976D2);border-radius:10px;padding:10px 16px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">'+
-    '<div><div style="font-size:10px;color:rgba(255,255,255,.85);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;font-weight:600">💰 Saldo em Caixa</div>'+
-    '<div style="font-size:24px;font-weight:800;color:'+(saldoCaixa>=0?'#69F0AE':'#FF5252')+';letter-spacing:-.02em">'+fmtR(saldoCaixa)+'</div></div>'+
-    '<div style="display:flex;gap:20px">'+
-    '<div style="text-align:center"><div style="font-size:9px;color:rgba(255,255,255,.8);font-weight:600;text-transform:uppercase;margin-bottom:2px">Recebido</div><div style="font-size:15px;font-weight:700;color:#fff">'+fmtR(k.recPago||0)+'</div></div>'+
+    // ── BANNER SALDO ──────────────────────────────────────────
+    '<div style="background:linear-gradient(135deg,#1565C0,#1976D2);border-radius:10px;padding:12px 16px;margin-bottom:8px">'+
+    '<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px">'+
+    '<div><div style="font-size:10px;color:rgba(255,255,255,.85);text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:3px">💰 Saldo em Caixa</div>'+
+    '<div style="font-size:26px;font-weight:800;color:'+(saldoCaixa>=0?'#69F0AE':'#FF5252')+';letter-spacing:-.02em;line-height:1">'+fmtR(saldoCaixa)+'</div></div>'+
+    '<div style="display:flex;gap:16px;flex-wrap:wrap">'+
+    '<div><div style="font-size:9px;color:rgba(255,255,255,.8);font-weight:600;text-transform:uppercase;margin-bottom:2px">Recebido</div><div style="font-size:14px;font-weight:700;color:#fff">'+fmtR(k.recPago||0)+'</div></div>'+
     '<div style="width:1px;background:rgba(255,255,255,.2)"></div>'+
-    '<div style="text-align:center"><div style="font-size:9px;color:rgba(255,255,255,.8);font-weight:600;text-transform:uppercase;margin-bottom:2px">Despesas</div><div style="font-size:15px;font-weight:700;color:#FFAB40">'+fmtR(k.despPago||0)+'</div></div>'+
+    '<div><div style="font-size:9px;color:rgba(255,255,255,.8);font-weight:600;text-transform:uppercase;margin-bottom:2px">Despesas</div><div style="font-size:14px;font-weight:700;color:#FFAB40">'+fmtR(k.despPago||0)+'</div></div>'+
     '<div style="width:1px;background:rgba(255,255,255,.2)"></div>'+
-    '<div style="text-align:center"><div style="font-size:9px;color:rgba(255,255,255,.8);font-weight:600;text-transform:uppercase;margin-bottom:2px">A Receber</div><div style="font-size:15px;font-weight:700;color:#FFD740">'+fmtR(aReceber)+'</div></div>'+
-    '</div></div>'+
+    '<div><div style="font-size:9px;color:rgba(255,255,255,.8);font-weight:600;text-transform:uppercase;margin-bottom:2px">A Receber</div><div style="font-size:14px;font-weight:700;color:#FFD740">'+fmtR(aReceber)+'</div></div>'+
+    '</div></div></div>'+
 
-    // Linha 1 — 4 KPIs + calendário
-    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1.2fr;gap:8px;margin-bottom:8px">'+
-    '<div style="'+cs+';border-top:3px solid #2196F3"><div style="font-size:9px;color:var(--text4);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:6px">Receitas mês</div><div style="font-size:22px;font-weight:800;color:var(--text)">'+fmtK(k.receitas)+'</div><div style="font-size:10px;color:var(--text4);margin-top:3px">acum: '+fmtR(k.receitasTotal||0)+'</div></div>'+
-    '<div style="'+cs+';border-top:3px solid #FF9800"><div style="font-size:9px;color:var(--text4);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:6px">Despesas mês</div><div style="font-size:22px;font-weight:800;color:var(--text)">'+fmtK(k.despesas)+'</div><div style="font-size:10px;color:var(--text4);margin-top:3px">acum: '+fmtR(k.despesasTotal||0)+'</div></div>'+
-    '<div style="'+cs+';border-top:3px solid #FFD740"><div style="font-size:9px;color:var(--text4);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:6px">A Receber</div><div style="font-size:22px;font-weight:800;color:#D97706">'+fmtK(aReceber)+'</div><div style="font-size:10px;color:var(--text4);margin-top:3px">pendentes</div></div>'+
-    '<div style="'+cs+';border-top:3px solid '+(k.inadimplentes>0?'#DC2626':'#059669')+'"><div style="font-size:9px;color:var(--text4);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:6px">Inadimplentes</div><div style="font-size:22px;font-weight:800;color:'+(k.inadimplentes>0?'#DC2626':'#059669')+'">'+k.inadimplentes+'</div><div style="font-size:10px;color:var(--text4);margin-top:3px">'+k.adimplencia+'% adimplência</div></div>'+
+    // ── LINHA 1: 4 KPIs + CALENDÁRIO ──────────────────────────
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr) 1.3fr;gap:8px;margin-bottom:8px">'+
+    // KPI Receitas
+    '<div style="'+cs+';border-top:3px solid #2196F3">'+
+    '<div style="font-size:9px;color:var(--text4);text-transform:uppercase;font-weight:700;letter-spacing:.05em;margin-bottom:4px">Receitas mês</div>'+
+    '<div style="font-size:18px;font-weight:800;color:var(--text);line-height:1">'+fmtR(k.receitas)+'</div>'+
+    '<div style="font-size:10px;color:var(--text4);margin-top:3px">acum: '+fmtR(k.receitasTotal||0)+'</div></div>'+
+    // KPI Despesas
+    '<div style="'+cs+';border-top:3px solid #FF9800">'+
+    '<div style="font-size:9px;color:var(--text4);text-transform:uppercase;font-weight:700;letter-spacing:.05em;margin-bottom:4px">Despesas mês</div>'+
+    '<div style="font-size:18px;font-weight:800;color:var(--text);line-height:1">'+fmtR(k.despesas)+'</div>'+
+    '<div style="font-size:10px;color:var(--text4);margin-top:3px">acum: '+fmtR(k.despesasTotal||0)+'</div></div>'+
+    // KPI A Receber
+    '<div style="'+cs+';border-top:3px solid #FFD740">'+
+    '<div style="font-size:9px;color:var(--text4);text-transform:uppercase;font-weight:700;letter-spacing:.05em;margin-bottom:4px">A Receber</div>'+
+    '<div style="font-size:18px;font-weight:800;color:#D97706;line-height:1">'+fmtR(aReceber)+'</div>'+
+    '<div style="font-size:10px;color:var(--text4);margin-top:3px">pendente total</div></div>'+
+    // KPI Inadimplentes
+    '<div style="'+cs+';border-top:3px solid '+(k.inadimplentes>0?'#DC2626':'#059669')+'">'+
+    '<div style="font-size:9px;color:var(--text4);text-transform:uppercase;font-weight:700;letter-spacing:.05em;margin-bottom:4px">Inadimplentes</div>'+
+    '<div style="font-size:18px;font-weight:800;color:'+(k.inadimplentes>0?'#DC2626':'#059669')+';line-height:1">'+k.inadimplentes+'</div>'+
+    '<div style="font-size:10px;color:var(--text4);margin-top:3px">'+k.adimplencia+'% adimplência</div></div>'+
+    // Calendário
     '<div style="'+cs+'">'+cal+'</div>'+
     '</div>'+
 
-    // Linha 2 — gráfico + receitas tipo + adimplência + alertas
-    '<div style="display:grid;grid-template-columns:2fr 1fr 0.7fr 1.1fr;gap:8px;margin-bottom:8px">'+
-
+    // ── LINHA 2: GRÁFICO | RECEITAS TIPO | ADIMPLÊNCIA | ALERTAS ──
+    '<div style="display:grid;grid-template-columns:2.2fr 1fr 0.6fr 1fr;gap:8px;margin-bottom:8px">'+
+    // Gráfico
     '<div style="'+cs+'">'+
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
-    '<div><div style="font-size:13px;font-weight:700;color:var(--text)">Receitas × Despesas</div><div style="font-size:10px;color:var(--text4)">últimos 6 meses</div></div>'+
-    '<div style="display:flex;gap:10px;font-size:10px"><span style="color:#2196F3">— Receitas</span><span style="color:#FF9800">— Despesas</span></div>'+
-    '</div>'+grafLinha+'</div>'+
-
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+    '<div><div style="font-size:12px;font-weight:700;color:var(--text)">Receitas × Despesas</div>'+
+    '<div style="font-size:10px;color:var(--text4)">últimos 6 meses</div></div>'+
+    '<div style="display:flex;gap:8px;font-size:10px;color:var(--text3)">'+
+    '<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:2px;background:#2196F3;display:inline-block"></span>Receitas</span>'+
+    '<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:2px;background:#FF9800;display:inline-block"></span>Despesas</span>'+
+    '</div></div>'+grafLinha+'</div>'+
+    // Receitas por tipo
     '<div style="'+cs+'">'+
-    '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">Receitas por tipo</div>'+
-    barrasHoriz+'</div>'+
-
+    '<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">Receitas por tipo</div>'+
+    (function(){
+      var catMap={};
+      movs.forEach(function(m){if(m.tipo!=='receita')return;var cat=m.categoria||'Outros';catMap[cat]=(catMap[cat]||0)+Number(m.valor||0);});
+      var tot=Object.values(catMap).reduce(function(s,v){return s+v;},0)||1;
+      return Object.entries(catMap).slice(0,4).map(function(e){
+        var pct=Math.round(e[1]/tot*100);
+        return '<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">'+
+          '<span style="color:var(--text2);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%">'+e[0]+'</span>'+
+          '<span style="color:var(--text3);flex-shrink:0">'+pct+'%</span></div>'+
+          '<div style="background:var(--border);border-radius:3px;height:5px"><div style="width:'+pct+'%;background:#2196F3;height:5px;border-radius:3px"></div></div></div>';
+      }).join('')||'<div style="font-size:11px;color:var(--text4)">Sem dados</div>';
+    })()+
+    '</div>'+
+    // Adimplência
     '<div style="'+cs+';display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">'+
-    '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;width:100%;text-align:left">Adimplência</div>'+
+    '<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;width:100%;text-align:left">Adimplência</div>'+
     donut+
+    '<div style="font-size:10px;color:var(--text3);margin-top:4px">'+k.inadimplentes+' em atraso</div>'+
+    '</div>'+
+    // Alertas
+    '<div style="'+cs+'">'+
+    '<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">🎯 Alertas</div>'+
+    alertas.slice(0,4).map(function(a){
+      return '<div onclick="navigate(\''+a.pg+'\')" style="display:flex;align-items:flex-start;gap:6px;padding:6px 8px;background:'+a.cor+'11;border-left:3px solid '+a.cor+';border-radius:5px;cursor:pointer;margin-bottom:5px">'+
+        '<span style="font-size:12px;flex-shrink:0">'+a.ico+'</span>'+
+        '<span style="font-size:11px;font-weight:500;color:var(--text2);line-height:1.3">'+a.txt+'</span></div>';
+    }).join('')+
+    '</div>'+
     '</div>'+
 
+    // ── LINHA 3: MOVIMENTAÇÕES | CHAMADOS | ATALHOS ────────────
+    '<div style="display:grid;grid-template-columns:1.4fr 1fr 0.8fr;gap:8px">'+
+    // Movimentações
     '<div style="'+cs+'">'+
-    '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🎯 Alertas</div>'+
-    alertHTML+'</div>'+
-    '</div>'+
-
-    // Linha 3 — movimentações + chamados + atalhos
-    '<div style="display:grid;grid-template-columns:1.4fr 1fr 0.8fr;gap:10px">'+
-
-    '<div style="'+cs+'">'+
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
-    '<div style="font-size:13px;font-weight:700;color:var(--text)">Movimentações recentes</div>'+
-    '<button onclick="navigate(\'financeiro\')" style="font-size:11px;color:#2196F3;background:none;border:none;cursor:pointer;font-weight:600">Ver todas →</button>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+    '<div style="font-size:12px;font-weight:700;color:var(--text)">Movimentações recentes</div>'+
+    '<button onclick="navigate(\'financeiro\')" style="font-size:11px;color:#2196F3;background:none;border:none;cursor:pointer;font-weight:600;flex-shrink:0">Ver todas →</button>'+
     '</div>'+movHTML+'</div>'+
-
+    // Chamados
     '<div style="'+cs+'">'+
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
-    '<div style="font-size:13px;font-weight:700;color:var(--text)">Chamados</div>'+
-    '<button onclick="navigate(\'manutencao\')" style="font-size:11px;color:#2196F3;background:none;border:none;cursor:pointer;font-weight:600">Ver todos →</button>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+    '<div style="font-size:12px;font-weight:700;color:var(--text)">Chamados abertos</div>'+
+    '<button onclick="navigate(\'manutencao\')" style="font-size:11px;color:#2196F3;background:none;border:none;cursor:pointer;font-weight:600;flex-shrink:0">Ver →</button>'+
     '</div>'+
     (manut.length?manut.map(function(m){
       var cor={Urgente:'#DC2626',Média:'#FF9800',Baixa:'#059669'}[m.prioridade]||'#94A3B8';
-      return '<div style="padding:7px 0;border-bottom:1px solid var(--border)">'+
-        '<div style="display:flex;justify-content:space-between;align-items:center">'+
-        '<div style="font-size:12px;font-weight:500;color:var(--text)">'+m.titulo+'</div>'+
-        '<span style="font-size:10px;font-weight:600;color:'+cor+'">'+( m.prioridade||'—')+'</span></div>'+
+      return '<div style="padding:6px 0;border-bottom:1px solid var(--border)">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px">'+
+        '<div style="font-size:12px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m.titulo+'</div>'+
+        '<span style="font-size:10px;font-weight:600;color:'+cor+';flex-shrink:0">'+(m.prioridade||'—')+'</span></div>'+
         '<div style="font-size:10px;color:var(--text4)">'+m.status+'</div></div>';
-    }).join(''):'<div style="padding:12px 0;text-align:center;color:var(--text4);font-size:12px">✅ Sem chamados</div>')+
+    }).join(''):'<div style="padding:10px 0;text-align:center;color:var(--text4);font-size:12px">✅ Nenhum chamado</div>')+
     '</div>'+
-
+    // Atalhos
     '<div style="'+cs+'">'+
-    '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">Acesso rápido</div>'+
-    '<div style="display:flex;flex-direction:column;gap:6px">'+
+    '<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">Acesso rápido</div>'+
+    '<div style="display:flex;flex-direction:column;gap:5px">'+
     [
       {ico:'💰',label:'Lançar movimentação',pg:'financeiro'},
       {ico:'📬',label:'Encomendas ('+enc+')',pg:'encomendas'},
       {ico:'📢',label:'Comunicados',pg:'comunicados'},
       {ico:'📊',label:'Relatório executivo',fn:'gerarRelatorioExecutivo()'},
     ].map(function(a){
-      return '<button onclick="'+(a.fn||'navigate(\'' +a.pg+ '\')')+'" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text2);width:100%;text-align:left">'+
-        '<span style="font-size:14px">'+a.ico+'</span>'+a.label+'</button>';
+      return '<button onclick="'+(a.fn||'navigate(\\\''+a.pg+'\\\')')+'" style="display:flex;align-items:center;gap:7px;padding:7px 9px;background:var(--bg);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:11px;font-weight:500;color:var(--text2);width:100%;text-align:left">'+
+        '<span style="font-size:13px">'+a.ico+'</span>'+a.label+'</button>';
     }).join('')+
     '</div></div>'+
     '</div>'
