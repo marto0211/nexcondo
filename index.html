@@ -555,7 +555,8 @@ tr:hover td { background: var(--bg); }
           <button type="button" onclick="toggleSenhaVis()" id="btn-olho" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;padding:0;color:#9CA3AF">👁</button>
         </div>
       </div>
-      <button class="login-submit" onclick="doLogin()">Entrar no sistema</button>
+      <button onclick="doLogin()" style="width:100%;padding:13px;background:linear-gradient(135deg,#1565C0,#1976D2);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">Entrar no sistema</button>
+      <button type="button" onclick="abrirAreaMorador()" style="width:100%;padding:11px;background:linear-gradient(135deg,#2E7D32,#43A047);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px">🏠 Área do Condômino</button>
       <div class="login-import">
         <p style="font-size:11px;color:#9CA3AF;margin-bottom:8px">Restaurar dados de um backup anterior:</p>
         <button type="button" onclick="document.getElementById('import-backup-login').click()" style="background:#EEF2FF;border:1px solid #C7D2FE;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:500;color:#4F46E5;cursor:pointer">📥 Importar backup (.json)</button>
@@ -621,6 +622,7 @@ tr:hover td { background: var(--bg); }
       <div class="nav-section">Sistema</div>
       <button class="nav-item" data-page="whatsapp" onclick="navigate('whatsapp',this)"><span class="nav-icon">💬</span>WhatsApp</button>
       <button class="nav-item" data-page="lixeira" onclick="navigate('lixeira',this)"><span class="nav-icon">🗑️</span>Lixeira</button>
+      <button class="nav-item" data-page="auditoria" onclick="navigate('auditoria',this)"><span class="nav-icon">🛡️</span>Auditoria</button>
       <button class="nav-item" data-page="usuarios" onclick="navigate('usuarios',this)"><span class="nav-icon">👤</span>Usuários</button>
       <button class="nav-item" data-page="configuracoes" onclick="navigate('configuracoes',this)"><span class="nav-icon">⚙️</span>Configurações</button>
     </nav>
@@ -799,11 +801,77 @@ function _iniciarAutoSync(){
 }
 
 
+// ===== AUDITORIA =====
+var _auditEnabled = true;
+var _MODULOS_AUDIT = {
+  moradores:'Moradores', movimentacoes:'Financeiro', comunicados:'Comunicados',
+  manutencoes:'Manutenções', reservas:'Reservas', encomendas:'Encomendas',
+  visitantes:'Visitantes', fornecedores:'Fornecedores', estoque:'Estoque',
+  documentos:'Documentos', funcionarios:'Funcionários', chamados:'Chamados',
+  chaves:'Chaves', patrimonio:'Patrimônio', compras:'Compras', ferias:'Férias',
+  ocorrencias:'Ocorrências', contratos:'Contratos', despesasFixas:'Despesas Fixas',
+  fundoReserva:'Fundo de Reserva', orcamento:'Orçamento', assembleias:'Assembleias',
+  ouvidoria:'Ouvidoria', usuarios:'Usuários', perfis:'Perfis', pix:'Pix',
+  config:'Configurações', preventivas:'Preventivas'
+};
+
+function _logAudit(acao, modulo, detalhe, extra){
+  if(!_auditEnabled) return;
+  try{
+    var usr = window._usuarioAtual;
+    var log = DB._getRaw('auditoria') || [];
+    var entrada = {
+      id: 'aud_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+      data: new Date().toLocaleDateString('pt-BR'),
+      hora: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),
+      dataISO: new Date().toISOString(),
+      acao: acao,
+      modulo: modulo || 'Sistema',
+      detalhe: detalhe || '',
+      usuario: usr ? (usr.nome || usr.email || 'Desconhecido') : 'Sistema',
+      perfil: usr ? (usr.perfil || 'desconhecido') : 'sistema',
+      extra: extra || null
+    };
+    log.unshift(entrada);
+    // Manter apenas os últimos 1000 registros
+    if(log.length > 1000) log = log.slice(0, 1000);
+    DB._setRaw('auditoria', log);
+  }catch(e){}
+}
+
+function getAuditoria(){
+  return DB._getRaw('auditoria') || [];
+}
+
 const DB = {
   get(key) {
     try { return JSON.parse(localStorage.getItem('cg3_'+key)); } catch { return null; }
   },
+  _getRaw(key) {
+    try { return JSON.parse(localStorage.getItem('cg3_'+key)); } catch { return null; }
+  },
+  _setRaw(key, val) {
+    localStorage.setItem('cg3_'+key, JSON.stringify(val));
+    _agendarSync(key, val);
+  },
   set(key, val) {
+    // Registrar na auditoria (apenas coleções relevantes)
+    if(_MODULOS_AUDIT[key] && _auditEnabled){
+      try{
+        var anterior = DB.get(key);
+        var modulo = _MODULOS_AUDIT[key];
+        // Detectar tipo de ação
+        var acao = '✏️ Editado';
+        if(Array.isArray(val) && Array.isArray(anterior)){
+          if(val.length > anterior.length) acao = '➕ Adicionado';
+          else if(val.length < anterior.length) acao = '🗑️ Excluído';
+          else acao = '✏️ Editado';
+        } else if(!anterior) {
+          acao = '➕ Criado';
+        }
+        _logAudit(acao, modulo, 'Alteração em '+modulo);
+      }catch(e){}
+    }
     localStorage.setItem('cg3_'+key, JSON.stringify(val));
     _agendarSync(key, val);
   },
@@ -1677,21 +1745,47 @@ inadimplentes(){
 // ===== MORADORES =====
 moradores(){
   const list=getMoradores().slice().sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  const semSenha=list.filter(m=>!m.senha).length;
   const rows=list.length?list.map((m,i)=>`
     <tr>
       <td><div class="person-cell"><div class="avatar ${avColor(i)}">${initials(m.nome)}</div><div><div class="person-name">${m.nome}</div><div class="person-apt">${m.tipoImovel==='Casa'?'Casa':'Apto'} ${m.apto}</div></div></div></td>
       <td>${m.tipo||'-'}</td><td>${m.telefone||'-'}</td>
       <td><span class="badge ${m.status==='adimplente'?'b-pago':'b-atrasado'}">${m.status==='adimplente'?'Adimplente':'Inadimplente'}</span></td>
+      <td style="text-align:center">
+        ${m.senha
+          ?`<span style="font-size:10px;background:#ECFDF5;color:#059669;padding:2px 8px;border-radius:10px;font-weight:600">✅ Tem senha</span>`
+          :`<span style="font-size:10px;background:#FEF2F2;color:#DC2626;padding:2px 8px;border-radius:10px;font-weight:600">⚠️ Sem senha</span>`
+        }
+      </td>
       <td>
         <button class="card-action" onclick="verMorador('${m.id}')">👁</button>
         <button class="card-action" onclick="editarMorador('${m.id}')">✏️</button>
+        <button class="card-action" onclick="definirSenhaMorador('${m.id}','${m.nome.replace(/'/g,'')}')">🔑</button>
         <button class="card-action" style="color:var(--danger)" onclick="confirmDelete('Excluir ${m.nome}?',()=>{deleteMorador('${m.id}');navigate('moradores')})">🗑</button>
       </td>
-    </tr>`).join(''):`<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">Nenhum morador cadastrado.</td></tr>`;
+    </tr>`).join(''):`<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">Nenhum morador cadastrado.</td></tr>`;
   return`
+    ${semSenha>0?`
+    <div class="card" style="border-top:3px solid #FF9800;margin-bottom:12px">
+      <div class="card-header">
+        <div class="card-title">⚠️ ${semSenha} morador(es) sem senha cadastrada</div>
+        <button class="btn-send" onclick="definirSenhaTodos()">🔑 Definir senha para todos</button>
+      </div>
+      <div style="font-size:13px;color:var(--text3)">
+        Sem senha, o morador não consegue acessar a Área do Condômino. 
+        Clique em <strong>"Definir senha para todos"</strong> para cadastrar uma senha padrão de uma vez, 
+        ou clique em 🔑 em cada morador individualmente.
+      </div>
+    </div>`:''}
     <div class="card">
-      <div class="card-header"><div class="card-title">👥 Moradores — ${list.length} cadastrados</div><div style="display:flex;gap:8px"><button class="btn-secondary" onclick="imprimirRelatorio('moradores')">🖨️ Imprimir</button><button class="btn-send" onclick="novoMorador()">+ Adicionar</button></div></div>
-      <div class="table-wrap"><table><thead><tr><th>Morador</th><th>Tipo</th><th>Telefone</th><th>Situação</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="card-header">
+        <div class="card-title">👥 Moradores — ${list.length} cadastrados</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-secondary" onclick="imprimirRelatorio('moradores')">🖨️ Imprimir</button>
+          <button class="btn-send" onclick="novoMorador()">+ Adicionar</button>
+        </div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Morador</th><th>Tipo</th><th>Telefone</th><th>Situação</th><th>Senha</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
     </div>`;
 },
 
@@ -3091,6 +3185,93 @@ usuarios(){
     '<button style="'+(aba==='perfis'?tabAtivo:tabInativo)+'" onclick="window._usrAba=\'perfis\';navigate(\'usuarios\')">🎭 Perfis e permissões</button>'+
     '</div>'+
     (aba==='usuarios'?abaUsuarios():abaPerfis());
+},
+
+auditoria(){
+  if(!temPermissao('usuarios')){return '<div class="card"><p style="color:#ef4444;padding:20px;text-align:center">⛔ Sem permissão para acessar a auditoria.</p></div>';}
+  var log = getAuditoria();
+  var filtroAcao = window._auditFiltroAcao || '';
+  var filtroModulo = window._auditFiltroModulo || '';
+  var filtroUsuario = window._auditFiltroUsuario || '';
+  var filtroBusca = window._auditFiltroBusca || '';
+
+  // Aplicar filtros
+  var filtrado = log.filter(function(l){
+    if(filtroAcao && !l.acao.includes(filtroAcao)) return false;
+    if(filtroModulo && l.modulo !== filtroModulo) return false;
+    if(filtroUsuario && l.usuario !== filtroUsuario) return false;
+    if(filtroBusca && !(l.detalhe+l.usuario+l.modulo).toLowerCase().includes(filtroBusca.toLowerCase())) return false;
+    return true;
+  });
+
+  // Opções únicas para filtros
+  var acoes = [...new Set(log.map(function(l){return l.acao;}))];
+  var modulos = [...new Set(log.map(function(l){return l.modulo;}))].sort();
+  var usuarios = [...new Set(log.map(function(l){return l.usuario;}))].sort();
+
+  // Cores por tipo de ação
+  var corAcao = function(a){
+    if(a.includes('Login')) return {bg:'#E3F2FD',color:'#1565C0'};
+    if(a.includes('Logout')) return {bg:'#F3E5F5',color:'#6A1B9A'};
+    if(a.includes('Adicionado')||a.includes('Criado')) return {bg:'#E8F5E9',color:'#2E7D32'};
+    if(a.includes('Excluído')) return {bg:'#FFEBEE',color:'#C62828'};
+    if(a.includes('Editado')) return {bg:'#FFF8E1',color:'#F57F17'};
+    return {bg:'#F5F5F5',color:'#424242'};
+  };
+
+  var rows = filtrado.length ? filtrado.slice(0,200).map(function(l){
+    var c = corAcao(l.acao);
+    return '<tr>'+
+      '<td style="font-size:11px;color:var(--text3);white-space:nowrap">'+l.data+'</td>'+
+      '<td style="font-size:11px;color:var(--text3);white-space:nowrap">'+l.hora+'</td>'+
+      '<td><span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:'+c.bg+';color:'+c.color+';white-space:nowrap">'+l.acao+'</span></td>'+
+      '<td style="font-size:12px;font-weight:500;color:var(--text2)">'+l.modulo+'</td>'+
+      '<td style="font-size:12px;color:var(--text2)">'+l.detalhe+'</td>'+
+      '<td style="font-size:12px">'+l.usuario+'</td>'+
+      '<td><span style="font-size:10px;background:var(--bg);padding:2px 6px;border-radius:10px;color:var(--text3)">'+l.perfil+'</span></td>'+
+      '</tr>';
+  }).join('') : '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3)">Nenhum registro encontrado com os filtros selecionados.</td></tr>';
+
+  // Estatísticas
+  var totalLogins = log.filter(function(l){return l.acao.includes('Login');}).length;
+  var totalAdd = log.filter(function(l){return l.acao.includes('Adicionado')||l.acao.includes('Criado');}).length;
+  var totalEdit = log.filter(function(l){return l.acao.includes('Editado');}).length;
+  var totalDel = log.filter(function(l){return l.acao.includes('Excluído');}).length;
+
+  return '<div class="card" style="margin-bottom:12px">'+
+    '<div class="card-header"><div class="card-title">🛡️ Auditoria do Sistema</div>'+
+    '<div style="display:flex;gap:8px">'+
+    '<button class="btn-secondary" onclick="exportarAuditoriaPDF()">📄 Exportar PDF</button>'+
+    '<button class="btn-secondary" style="color:#DC2626;border-color:#FECACA" onclick="if(confirm(\'Limpar log de auditoria? Esta ação não pode ser desfeita.\')){DB._setRaw(\'auditoria\',[]);navigate(\'auditoria\');toast(\'Log limpo!\');}">🗑️ Limpar log</button>'+
+    '</div></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">'+
+    '<div style="background:#E3F2FD;border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;color:#1565C0;font-weight:600;text-transform:uppercase;margin-bottom:4px">Total registros</div><div style="font-size:22px;font-weight:800;color:#0D47A1">'+log.length+'</div></div>'+
+    '<div style="background:#E8F5E9;border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;color:#2E7D32;font-weight:600;text-transform:uppercase;margin-bottom:4px">Adicionados</div><div style="font-size:22px;font-weight:800;color:#1B5E20">'+totalAdd+'</div></div>'+
+    '<div style="background:#FFF8E1;border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;color:#F57F17;font-weight:600;text-transform:uppercase;margin-bottom:4px">Editados</div><div style="font-size:22px;font-weight:800;color:#E65100">'+totalEdit+'</div></div>'+
+    '<div style="background:#FFEBEE;border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;color:#C62828;font-weight:600;text-transform:uppercase;margin-bottom:4px">Excluídos</div><div style="font-size:22px;font-weight:800;color:#B71C1C">'+totalDel+'</div></div>'+
+    '</div>'+
+    '</div>'+
+    '<div class="card">'+
+    '<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px;margin-bottom:14px">'+
+    '<input class="form-input" placeholder="🔍 Buscar..." value="'+filtroBusca+'" oninput="window._auditFiltroBusca=this.value;navigate(\'auditoria\')" style="font-size:14px">'+
+    '<select class="form-select" onchange="window._auditFiltroModulo=this.value;navigate(\'auditoria\')">'+
+    '<option value="">Todos os módulos</option>'+
+    modulos.map(function(m){return '<option value="'+m+'"'+(m===filtroModulo?' selected':'')+'>'+m+'</option>';}).join('')+
+    '</select>'+
+    '<select class="form-select" onchange="window._auditFiltroUsuario=this.value;navigate(\'auditoria\')">'+
+    '<option value="">Todos os usuários</option>'+
+    usuarios.map(function(u){return '<option value="'+u+'"'+(u===filtroUsuario?' selected':'')+'>'+u+'</option>';}).join('')+
+    '</select>'+
+    '<select class="form-select" onchange="window._auditFiltroAcao=this.value;navigate(\'auditoria\')">'+
+    '<option value="">Todas as ações</option>'+
+    acoes.map(function(a){return '<option value="'+a+'"'+(a===filtroAcao?' selected':'')+'>'+a+'</option>';}).join('')+
+    '</select>'+
+    '</div>'+
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:10px">Mostrando '+Math.min(filtrado.length,200)+' de '+filtrado.length+' registro(s)'+(log.length!==filtrado.length?' (filtrado de '+log.length+' total)':'')+' · Máximo 1.000 registros armazenados</div>'+
+    '<div class="table-wrap"><table><thead><tr>'+
+    '<th>Data</th><th>Hora</th><th>Ação</th><th>Módulo</th><th>Detalhe</th><th>Usuário</th><th>Perfil</th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '</div>';
 },
 
 lixeira(){
@@ -5278,6 +5459,7 @@ const TITLES={
   orcamento:'Orçamento Anual',
   fundoReserva:'Fundo de Reserva',
   usuarios:'Usuários e Permissões',
+  auditoria:'Auditoria — Log do Sistema',
   lixeira:'Lixeira — Itens Excluídos',
   portalMorador:'Portal do Morador'
 };
@@ -6024,6 +6206,7 @@ function doLogin(){
     if(usr){
       _registrarTentativa(user,true);
       window._usuarioAtual=usr;
+      _logAudit('🔑 Login','Sistema','Acesso realizado: '+usr.nome+' ('+usr.perfil+')');
       document.getElementById('login-screen').classList.add('hidden');
       document.getElementById('app').classList.remove('hidden');
       var cfg=getConfig();
@@ -6294,11 +6477,56 @@ function _preencherPermissoesPerfil(perfil){
   }
 }
 
+function exportarAuditoriaPDF(){
+  var log = getAuditoria();
+  var cfg = getConfig();
+  var hoje = new Date().toLocaleDateString('pt-BR');
+  var corAcao = function(a){
+    if(a.includes('Login')) return '#1565C0';
+    if(a.includes('Logout')) return '#6A1B9A';
+    if(a.includes('Adicionado')||a.includes('Criado')) return '#2E7D32';
+    if(a.includes('Excluído')) return '#C62828';
+    if(a.includes('Editado')) return '#F57F17';
+    return '#424242';
+  };
+  var rows = log.slice(0,500).map(function(l){
+    return '<tr style="border-bottom:1px solid #f1f5f9">'+
+      '<td style="padding:5px 6px;font-size:11px;white-space:nowrap">'+l.data+'</td>'+
+      '<td style="padding:5px 6px;font-size:11px;white-space:nowrap">'+l.hora+'</td>'+
+      '<td style="padding:5px 6px"><span style="font-size:10px;font-weight:600;color:'+corAcao(l.acao)+'">'+l.acao+'</span></td>'+
+      '<td style="padding:5px 6px;font-size:11px">'+l.modulo+'</td>'+
+      '<td style="padding:5px 6px;font-size:11px">'+l.detalhe+'</td>'+
+      '<td style="padding:5px 6px;font-size:11px;font-weight:500">'+l.usuario+'</td>'+
+      '</tr>';
+  }).join('');
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8">'+
+    '<title>Auditoria — '+cfg.nome+'</title>'+
+    '<style>body{font-family:Arial,sans-serif;margin:0;padding:20px;color:#1e293b}'+
+    '.header{background:#111827;color:#fff;padding:16px 20px;border-radius:8px;display:flex;justify-content:space-between;margin-bottom:20px}'+
+    'table{width:100%;border-collapse:collapse}'+
+    'th{text-align:left;padding:6px 6px;font-size:10px;color:#64748b;text-transform:uppercase;border-bottom:2px solid #e2e8f0}'+
+    '@media print{@page{margin:10mm}button{display:none}}'+
+    '</style></head><body>'+
+    '<div class="header"><div><div style="font-size:18px;font-weight:700">'+cfg.nome+'</div>'+
+    '<div style="font-size:12px;opacity:.6">Relatório de Auditoria — '+hoje+'</div></div>'+
+    '<div style="text-align:right;font-size:12px;opacity:.7">NexCondo<br>'+log.length+' registros</div></div>'+
+    '<table><thead><tr><th>Data</th><th>Hora</th><th>Ação</th><th>Módulo</th><th>Detalhe</th><th>Usuário</th></tr></thead>'+
+    '<tbody>'+rows+'</tbody></table>'+
+    '<div style="margin-top:16px;padding:10px;border-top:1px solid #e2e8f0;text-align:center;font-size:11px;color:#94a3b8">'+
+    'Gerado em '+hoje+' · NexCondo · '+cfg.nome+'</div>'+
+    '<div style="text-align:center;margin-top:12px"><button onclick="window.print()" style="background:#111827;color:#fff;border:none;border-radius:8px;padding:10px 20px;cursor:pointer">🖨️ Imprimir / Salvar PDF</button></div>'+
+    '</body></html>';
+  var w=window.open('','_blank');
+  if(w){w.document.write(html);w.document.close();}
+}
+
 function doLogout(){
   if(!confirm('Deseja sair do NexCondo?'))return;
+  var usr=window._usuarioAtual;
+  if(usr) _logAudit('🚪 Logout','Sistema','Saiu do sistema: '+(usr.nome||usr.email));
+  window._usuarioAtual=null;
   document.getElementById('app').classList.add('hidden');
   document.getElementById('login-screen').classList.remove('hidden');
-  // Parar o relógio
   if(window._clockInterval)clearInterval(window._clockInterval);
 }
 
@@ -6331,6 +6559,322 @@ document.addEventListener('visibilitychange', function(){
   }
 });
 
+
+// ===== ÁREA DO MORADOR =====
+var _moradorAtual = null;
+
+function abrirAreaMorador(){
+  var cfg=getConfig();
+  var el=document.getElementById('mor-condo-nome');
+  if(el) el.textContent=cfg.nome||'Residencial';
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('morador-screen').classList.remove('hidden');
+  setTimeout(function(){var i=document.getElementById('mor-login');if(i)i.focus();},300);
+}
+
+function definirSenhaMorador(id, nome){
+  var mor = getMoradores().find(function(m){return m.id===id;});
+  var senhaAtual = mor ? mor.senha : '';
+  var h = '<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:10px 14px;font-size:13px;color:#1D4ED8;margin-bottom:14px">'+
+    'A senha definida aqui permite que <strong>'+nome+'</strong> acesse a Área do Condômino. '+
+    'Você pode ver e alterar esta senha a qualquer momento.</div>'+
+    '<div class="form-full"><label class="form-label">Nova senha</label>'+
+    '<div style="position:relative">'+
+    '<input id="def-senha" type="password" class="form-input" style="padding-right:44px" placeholder="Mínimo 6 caracteres" value="'+(senhaAtual||'')+'">'+
+    '<button type="button" onclick="var i=document.getElementById(\'def-senha\');i.type=i.type===\'password\'?\'text\':\'password\'" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px">👁</button>'+
+    '</div></div>'+
+    '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">'+
+    '<button onclick="document.getElementById(\'def-senha\').value=\'123456\';document.getElementById(\'def-senha\').type=\'text\'" style="padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">Usar 123456</button>'+
+    '<button onclick="var cpf=(getMoradores().find(function(m){return m.id===\''+id+'\';})||{}).cpf||\'';
+  h += '\';document.getElementById(\'def-senha\').value=cpf.replace(/\\D/g,\'\').slice(0,6);document.getElementById(\'def-senha\').type=\'text\'" style="padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">Usar CPF (6 dígitos)</button>'+
+    '<button onclick="document.getElementById(\'def-senha\').value=(getMoradores().find(function(m){return m.id===\''+id+'\';})||{}).apto||\'';
+  h += '\';document.getElementById(\'def-senha\').type=\'text\'" style="padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">Usar nº do apto</button>'+
+    '</div>';
+
+  modal('🔑 Senha de acesso — '+nome, h, function(){
+    var nova = document.getElementById('def-senha').value.trim();
+    if(!nova || nova.length < 4){alert('A senha deve ter pelo menos 4 caracteres.');return;}
+    var mors = getMoradores();
+    var idx = mors.findIndex(function(m){return m.id===id;});
+    if(idx > -1){
+      mors[idx].senha = nova;
+      DB.set('moradores', mors);
+      closeModal();
+      navigate('moradores');
+      toast('✅ Senha definida para '+nome+'!');
+    }
+  });
+  setTimeout(function(){var b=document.getElementById('modal-save');if(b)b.textContent='Salvar senha';},50);
+}
+
+function definirSenhaTodos(){
+  var h = '<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:10px 14px;font-size:13px;color:#1D4ED8;margin-bottom:14px">'+
+    'Define uma senha padrão para <strong>todos os moradores que ainda não têm senha</strong>. '+
+    'Cada morador poderá trocar depois pelo app deles.</div>'+
+    '<div class="form-full"><label class="form-label">Senha padrão</label>'+
+    '<div style="position:relative">'+
+    '<input id="senha-todos" type="text" class="form-input" value="123456" style="padding-right:44px">'+
+    '</div></div>'+
+    '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">'+
+    '<button onclick="document.getElementById(\'senha-todos\').value=\'123456\'" style="padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">123456</button>'+
+    '<button onclick="document.getElementById(\'senha-todos\').value=\'nexcondo\'" style="padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">nexcondo</button>'+
+    '<button onclick="document.getElementById(\'senha-todos\').value=\'morador\'" style="padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">morador</button>'+
+    '</div>'+
+    '<div style="background:#FFFBEB;border:1px solid #FCD34D;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400E;margin-top:12px">'+
+    '⚠️ Apenas moradores SEM senha receberão a senha padrão. Senhas já existentes não serão alteradas.</div>';
+
+  modal('🔑 Definir senha padrão para todos', h, function(){
+    var senha = document.getElementById('senha-todos').value.trim();
+    if(!senha || senha.length < 4){alert('A senha deve ter pelo menos 4 caracteres.');return;}
+    var mors = getMoradores();
+    var count = 0;
+    mors.forEach(function(m){
+      if(!m.senha){m.senha = senha; count++;}
+    });
+    DB.set('moradores', mors);
+    closeModal();
+    navigate('moradores');
+    toast('✅ Senha definida para '+count+' morador(es)!');
+  });
+  setTimeout(function(){var b=document.getElementById('modal-save');if(b)b.textContent='Definir senha para todos';},50);
+}
+
+function voltarLoginPrincipal(){
+  document.getElementById('morador-screen').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+}
+
+function doLoginMorador(){
+  var login=document.getElementById('mor-login').value.trim();
+  var senha=document.getElementById('mor-senha').value;
+  if(!login||!senha){alert('Preencha o CPF/e-mail e a senha.');return;}
+  var mors=getMoradores();
+  var mor=mors.find(function(m){
+    var cpf=(m.cpf||'').replace(/\D/g,'');
+    var ll=login.replace(/\D/g,'');
+    return (m.email===login||cpf===ll)&&m.senha===senha&&m.ativo!==false;
+  });
+  if(!mor){alert('CPF/e-mail ou senha incorretos.');return;}
+  _moradorAtual=mor;
+  var cfg=getConfig();
+  var ini=(mor.nome||'M').split(' ').map(function(n){return n[0]||'';}).join('').slice(0,2).toUpperCase();
+  document.getElementById('mor-avatar').textContent=ini;
+  document.getElementById('mor-nome-display').textContent=mor.nome||'Morador';
+  document.getElementById('mor-apto-display').textContent='Apto '+(mor.apto||'--');
+  document.getElementById('mor-app-condo').textContent=cfg.nome||'NexCondo';
+  document.getElementById('mor-unidade-display').textContent=mor.apto||'--';
+  document.getElementById('mor-debito-display').textContent='R$ '+Number(mor.debito||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+  var badge=document.getElementById('mor-status-badge');
+  if(mor.status==='inadimplente'){
+    badge.textContent='Inadimplente';badge.style.background='#FEF2F2';badge.style.color='#DC2626';
+  } else {
+    badge.textContent='Adimplente';badge.style.background='#ECFDF5';badge.style.color='#059669';
+  }
+  document.getElementById('morador-screen').classList.add('hidden');
+  document.getElementById('morador-app').classList.remove('hidden');
+  morNavegar('inicio',null);
+}
+
+function doLogoutMorador(){
+  _moradorAtual=null;
+  document.getElementById('morador-app').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('mor-login').value='';
+  document.getElementById('mor-senha').value='';
+}
+
+function morTrocarSenha(){
+  var h='<div class="form-full"><label class="form-label">Senha atual</label>'+
+    '<input id="mor-s-atual" type="password" class="form-input" placeholder="Sua senha atual"></div>'+
+    '<div class="form-full"><label class="form-label">Nova senha</label>'+
+    '<input id="mor-s-nova" type="password" class="form-input" placeholder="Minimo 6 caracteres"></div>'+
+    '<div class="form-full"><label class="form-label">Confirmar nova senha</label>'+
+    '<input id="mor-s-conf" type="password" class="form-input" placeholder="Repita a nova senha"></div>'+
+    '<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:10px 12px;font-size:12px;color:#1D4ED8;margin-top:4px">'+
+    'Sua nova senha ficara registrada e podera ser visualizada pelo sindico.</div>';
+  modal('Trocar minha senha',h,function(){
+    var atual=document.getElementById('mor-s-atual').value;
+    var nova=document.getElementById('mor-s-nova').value;
+    var conf=document.getElementById('mor-s-conf').value;
+    var mor=_moradorAtual;
+    if(atual!==mor.senha){alert('Senha atual incorreta.');return;}
+    if(nova.length<6){alert('A nova senha deve ter pelo menos 6 caracteres.');return;}
+    if(nova!==conf){alert('As senhas nao coincidem.');return;}
+    var mors=getMoradores();
+    var idx=mors.findIndex(function(m){return m.id===mor.id;});
+    if(idx>-1){
+      var log=DB.get('logSenhas')||[];
+      log.unshift({
+        moradorId:mor.id,nome:mor.nome,apto:mor.apto,
+        senhaAnterior:mor.senha,senhaNova:nova,
+        data:new Date().toLocaleDateString('pt-BR'),
+        hora:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+        dataISO:new Date().toISOString()
+      });
+      DB.set('logSenhas',log);
+      mors[idx].senha=nova;
+      DB.set('moradores',mors);
+      _moradorAtual=mors[idx];
+      closeModal();
+      toast('Senha alterada com sucesso!');
+    }
+  });
+  setTimeout(function(){var b=document.getElementById('modal-save');if(b)b.textContent='Confirmar';},50);
+}
+
+function morNavegar(aba,btn){
+  document.querySelectorAll('.mor-nav-btn').forEach(function(b){b.style.color='#94a3b8';});
+  if(btn) btn.style.color='#2196F3';
+  else{var el=document.querySelector('.mor-nav-btn[data-tab="'+aba+'"]');if(el)el.style.color='#2196F3';}
+  var content=document.getElementById('mor-content');
+  var mor=_moradorAtual;
+  if(!mor||!content) return;
+  var fmtR=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});};
+  var cfg=getConfig();
+  var pix=DB.get('pix')||{};
+  var card=function(titulo,corpo,cor){
+    return '<div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)'+(cor?';border-top:3px solid '+cor:'')+'">'+(titulo?'<div style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:12px">'+titulo+'</div>':'')+corpo+'</div>';
+  };
+
+  if(aba==='inicio'){
+    var enc=(DB.get('encomendas')||[]).filter(function(e){return e.apto===mor.apto&&e.status!=='retirado';});
+    var comuns=(DB.get('comunicados')||[]).slice(0,3);
+    content.innerHTML=
+      card('Minha situacao',
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+        '<div style="background:#F0F4F8;border-radius:10px;padding:12px;text-align:center">'+
+        '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">Status</div>'+
+        '<div style="font-size:13px;font-weight:700;color:'+(mor.status==='inadimplente'?'#DC2626':'#059669')+'">'+(mor.status==='inadimplente'?'Pendente':'Em dia')+'</div></div>'+
+        '<div style="background:#F0F4F8;border-radius:10px;padding:12px;text-align:center">'+
+        '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">Debito</div>'+
+        '<div style="font-size:15px;font-weight:800;color:'+(Number(mor.debito)>0?'#DC2626':'#059669')+'">'+fmtR(mor.debito)+'</div></div>'+
+        '</div>'+
+        (pix.chave?'<button onclick="copiarPix()" style="width:100%;padding:11px;background:#1565C0;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-top:10px">Copiar chave Pix para pagar</button>':'')
+      ,'#2196F3')+
+      (enc.length?card('Encomendas na portaria',enc.map(function(e){
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9">'+
+          '<span style="font-size:20px">📦</span>'+
+          '<div><div style="font-size:13px;font-weight:500">'+e.descricao+'</div>'+
+          '<div style="font-size:11px;color:#64748b">'+e.data+'</div></div></div>';
+      }).join(''),'#FF9800'):'')+
+      card('Comunicados',comuns.length?comuns.map(function(c){
+        return '<div style="padding:8px 0;border-bottom:1px solid #f1f5f9">'+
+          '<div style="font-size:13px;font-weight:600">'+c.titulo+'</div>'+
+          '<div style="font-size:11px;color:#64748b">'+c.data+'</div></div>';
+      }).join(''):'<div style="text-align:center;color:#94a3b8;padding:10px">Nenhum comunicado</div>','#059669')+
+      card('Minha conta',
+        '<div style="font-size:13px;margin-bottom:12px"><strong>'+mor.nome+'</strong><br>Apto '+mor.apto+'</div>'+
+        '<button onclick="morTrocarSenha()" style="width:100%;padding:11px;background:#F0F4F8;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Trocar minha senha</button>'+
+        (cfg.telefone?'<a href="https://wa.me/55'+cfg.telefone.replace(/\D/g,'')+'" target="_blank" style="display:block;padding:11px;background:#25D366;color:#fff;border-radius:8px;text-align:center;font-size:13px;font-weight:600;text-decoration:none;margin-top:8px">Falar com o sindico no WhatsApp</a>':''));
+
+  } else if(aba==='financeiro'){
+    var movsMor=(DB.get('movimentacoes')||[]).filter(function(m){return m.apto===mor.apto||m.moradorId===mor.id;});
+    content.innerHTML=
+      card('Meu extrato',movsMor.length?movsMor.slice(0,10).map(function(mv){
+        var isRec=mv.tipo==='receita';
+        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9">'+
+          '<div style="width:36px;height:36px;border-radius:10px;background:'+(isRec?'#E3F2FD':'#FFF3E0')+';display:flex;align-items:center;justify-content:center;font-size:16px">'+(isRec?'💰':'💸')+'</div>'+
+          '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+mv.desc+'</div>'+
+          '<div style="font-size:11px;color:#64748b">'+mv.data+'</div></div>'+
+          '<div style="font-size:13px;font-weight:700;color:'+(isRec?'#059669':'#DC2626')+'">'+(isRec?'+':'-')+fmtR(mv.valor)+'</div></div>';
+      }).join(''):'<div style="text-align:center;color:#94a3b8;padding:16px">Sem lancamentos</div>','#2196F3')+
+      (pix.chave?card('Pagar taxa',
+        '<div style="font-size:12px;color:#64748b;margin-bottom:8px">Chave Pix: <strong>'+pix.chave+'</strong></div>'+
+        '<button onclick="copiarPix()" style="width:100%;padding:11px;background:#1565C0;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Copiar chave Pix</button>',
+        '#059669'):'');
+
+  } else if(aba==='chamados'){
+    var chams=(DB.get('chamados')||[]).filter(function(c){return c.apto===mor.apto||c.moradorId===mor.id;});
+    content.innerHTML=card('Meus chamados',
+      '<button onclick="morAbrirChamado()" style="width:100%;padding:11px;background:#2196F3;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:12px">+ Abrir novo chamado</button>'+
+      (chams.length?chams.map(function(c){
+        var cor={aberto:'#2196F3',andamento:'#FF9800',concluido:'#059669'}[c.status]||'#94a3b8';
+        return '<div style="padding:12px;background:#F8FAFC;border-radius:10px;margin-bottom:8px;border-left:3px solid '+cor+'">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+          '<div style="font-size:13px;font-weight:600">'+c.titulo+'</div>'+
+          '<span style="font-size:10px;font-weight:600;color:'+cor+'">'+c.status+'</span></div>'+
+          '<div style="font-size:12px;color:#64748b">'+c.descricao+'</div></div>';
+      }).join(''):'<div style="text-align:center;color:#94a3b8;padding:12px">Nenhum chamado</div>'),'#FF9800');
+
+  } else if(aba==='comunicados'){
+    var comuns2=DB.get('comunicados')||[];
+    content.innerHTML=card('Comunicados',comuns2.length?comuns2.map(function(c){
+      return '<div style="padding:12px;background:#F8FAFC;border-radius:10px;margin-bottom:8px">'+
+        '<div style="font-size:13px;font-weight:700;margin-bottom:4px">'+c.titulo+'</div>'+
+        '<div style="font-size:12px;color:#374151">'+c.mensagem+'</div>'+
+        '<div style="font-size:11px;color:#94a3b8;margin-top:4px">'+c.data+'</div></div>';
+    }).join(''):'<div style="text-align:center;color:#94a3b8;padding:16px">Nenhum comunicado</div>','#059669');
+
+  } else if(aba==='reservas'){
+    var areas=['Salao de Festas','Churrasqueira','Quadra','Piscina','Academia','Espaco Gourmet'];
+    var resMor=(DB.get('reservas')||[]).filter(function(r){return r.apto===mor.apto||r.moradorId===mor.id;});
+    content.innerHTML=card('Reservar area comum',
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'+
+      areas.map(function(a){
+        return '<button onclick="morReservar(\'' +a+ '\')" style="padding:12px 8px;background:#F0F4F8;border:1.5px solid #E2E8F0;border-radius:10px;font-size:12px;font-weight:600;color:#374151;cursor:pointer">'+a+'</button>';
+      }).join('')+'</div>'+
+      (resMor.length?resMor.map(function(r){
+        return '<div style="padding:10px;background:#F8FAFC;border-radius:8px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">'+
+          '<div><div style="font-size:13px;font-weight:600">'+r.area+'</div>'+
+          '<div style="font-size:11px;color:#64748b">'+r.data+(r.horario?' - '+r.horario:'')+'</div></div>'+
+          '<span style="font-size:10px;background:#ECFDF5;color:#059669;padding:3px 8px;border-radius:10px;font-weight:600">Confirmada</span></div>';
+      }).join(''):'<div style="font-size:12px;color:#94a3b8;padding:8px 0">Nenhuma reserva</div>'),'#2196F3');
+  }
+}
+
+
+function copiarPix(){
+  var pix=DB.get('pix')||{};
+  if(pix.chave){
+    navigator.clipboard.writeText(pix.chave).then(function(){toast('Chave Pix copiada!');}).catch(function(){
+      prompt('Copie a chave Pix:',pix.chave);
+    });
+  }
+}
+
+function morAbrirChamado(){
+  var cats=['Hidraulico','Eletrico','Limpeza','Elevador','Portao','Iluminacao','Outros'];
+  var h='<div class="form-full"><label class="form-label">Titulo</label><input id="mor-ch-titulo" class="form-input" placeholder="Ex: Vazamento na cozinha"></div>'+
+    '<div class="form-full"><label class="form-label">Categoria</label><select id="mor-ch-cat" class="form-select">'+cats.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div>'+
+    '<div class="form-full"><label class="form-label">Descricao</label><textarea id="mor-ch-desc" class="form-textarea" placeholder="Descreva o problema..."></textarea></div>';
+  modal('Novo chamado',h,function(){
+    var titulo=document.getElementById('mor-ch-titulo').value.trim();
+    if(!titulo){alert('Digite o titulo.');return;}
+    var mor=_moradorAtual;
+    var chams=DB.get('chamados')||[];
+    chams.push({id:'ch_'+Date.now(),titulo:titulo,
+      categoria:document.getElementById('mor-ch-cat').value,
+      descricao:document.getElementById('mor-ch-desc').value.trim(),
+      apto:mor.apto,moradorId:mor.id,nome:mor.nome,
+      status:'aberto',prioridade:'Media',
+      data:new Date().toLocaleDateString('pt-BR'),
+      dataISO:new Date().toISOString()});
+    DB.set('chamados',chams);
+    closeModal();morNavegar('chamados',null);toast('Chamado aberto!');
+  });
+}
+
+function morReservar(area){
+  var h='<div class="form-row">'+
+    '<div><label class="form-label">Data</label><input id="mor-res-data" type="date" class="form-input" min="'+new Date().toISOString().slice(0,10)+'"></div>'+
+    '<div><label class="form-label">Horario</label><select id="mor-res-hora" class="form-select">'+
+    ['08:00 - 12:00','12:00 - 16:00','16:00 - 20:00','20:00 - 23:00'].map(function(x){return '<option>'+x+'</option>';}).join('')+'</select></div></div>'+
+    '<div class="form-full"><label class="form-label">Obs</label><input id="mor-res-obs" class="form-input" placeholder="Numero de pessoas, evento..."></div>';
+  modal('Reservar: '+area,h,function(){
+    var data=document.getElementById('mor-res-data').value;
+    if(!data){alert('Selecione a data.');return;}
+    var mor=_moradorAtual;
+    var res=DB.get('reservas')||[];
+    res.push({id:'res_'+Date.now(),area:area,data:data,
+      horario:document.getElementById('mor-res-hora').value,
+      obs:document.getElementById('mor-res-obs').value,
+      apto:mor.apto,moradorId:mor.id,nome:mor.nome,
+      status:'confirmada',dataISO:new Date().toISOString()});
+    DB.set('reservas',res);
+    closeModal();morNavegar('reservas',null);toast('Reserva confirmada!');
+  });
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
   // Migrar dados do CondoGest → NexCondo automaticamente (apenas uma vez)
   if(!localStorage.getItem('nexcondo_migrado')){
@@ -6339,7 +6883,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       'ouvidoria','assembleias','funcionarios','ferias','chamados','chaves','patrimonio',
       'compras','ocorrencias','contratos','pix','pixOcultos','categoriasCustom',
       'catsDFCustom','despesasFixas','despesasFixasLancadas','lixeira','waFechamentoSnap',
-      'loginHistorico','fundoReserva','orcamento','perfis','usuarios','login'];
+      'loginHistorico','fundoReserva','orcamento','perfis','usuarios','login','auditoria'];
     var migrados=0;
     chaves.forEach(function(chave){
       var valorAntigo=localStorage.getItem('cg3_'+chave);
@@ -6383,5 +6927,144 @@ if('serviceWorker' in navigator){
 
 document.getElementById('topbar-sub').textContent=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
 </script>
+<!-- ÁREA DO MORADOR -->
+<div id="morador-screen" class="hidden" style="min-height:100vh;background:linear-gradient(135deg,#1565C0,#1976D2,#0D47A1);display:flex;align-items:center;justify-content:center;padding:20px;position:relative;overflow:hidden">
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse 60% 60% at 30% 40%,rgba(255,255,255,.08) 0%,transparent 60%)"></div>
+  <div style="width:100%;max-width:400px;position:relative;z-index:1">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="width:64px;height:64px;background:rgba(255,255,255,.15);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 14px">🏢</div>
+      <div style="font-size:22px;font-weight:800;color:#fff;margin-bottom:4px" id="mor-condo-nome">Residencial</div>
+      <div style="font-size:14px;color:rgba(255,255,255,.7)">Área exclusiva do condômino</div>
+    </div>
+    <div style="background:#fff;border-radius:18px;padding:28px 24px;box-shadow:0 24px 48px rgba(0,0,0,.2)">
+      <div style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:4px">Acesse sua área</div>
+      <div style="font-size:13px;color:#64748b;margin-bottom:20px">Use seu CPF ou e-mail cadastrado</div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">CPF ou E-mail</label>
+        <input id="mor-login" class="form-input" placeholder="000.000.000-00 ou email@email.com">
+      </div>
+      <div style="margin-bottom:20px">
+        <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Senha</label>
+        <div style="position:relative">
+          <input id="mor-senha" type="password" class="form-input" style="padding-right:44px" placeholder="Sua senha">
+          <button type="button" onclick="var i=document.getElementById('mor-senha');i.type=i.type==='password'?'text':'password'" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:#94a3b8">👁</button>
+        </div>
+      </div>
+      <button onclick="doLoginMorador()" style="width:100%;padding:13px;background:linear-gradient(135deg,#1565C0,#1976D2);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">Entrar</button>
+      <div style="text-align:center;margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0">
+        <button onclick="voltarLoginPrincipal()" style="background:none;border:none;color:#64748b;font-size:12px;cursor:pointer">← Voltar ao sistema</button>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:rgba(255,255,255,.5)">Não tem senha? Fale com o síndico.</div>
+  </div>
+</div>
+
+<div id="morador-app" class="hidden" style="min-height:100vh;background:#F0F4F8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <div style="background:linear-gradient(135deg,#1565C0,#1976D2);padding:16px 16px 40px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,.8)" id="mor-app-condo">NexCondo</div>
+      <button onclick="doLogoutMorador()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;cursor:pointer">Sair</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <div style="width:52px;height:52px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff" id="mor-avatar">?</div>
+      <div>
+        <div style="font-size:18px;font-weight:800;color:#fff" id="mor-nome-display">Morador</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.7)" id="mor-apto-display">Apto --</div>
+      </div>
+    </div>
+  </div>
+  <div style="margin:-24px 16px 16px;background:#fff;border-radius:16px;padding:16px;box-shadow:0 4px 20px rgba(0,0,0,.1)">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center">
+      <div>
+        <div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">Status</div>
+        <div id="mor-status-badge" style="font-size:12px;font-weight:700;padding:4px 8px;border-radius:20px;background:#ECFDF5;color:#059669;display:inline-block">✅ Adimplente</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">Débito</div>
+        <div id="mor-debito-display" style="font-size:16px;font-weight:800;color:#1e293b">R$ 0,00</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">Unidade</div>
+        <div id="mor-unidade-display" style="font-size:16px;font-weight:800;color:#1e293b">--</div>
+      </div>
+    </div>
+  </div>
+  <div style="padding:0 16px 100px" id="mor-content"></div>
+  <nav style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e2e8f0;display:flex;padding:6px 0 env(safe-area-inset-bottom);z-index:50">
+    <button class="mor-nav-btn" onclick="morNavegar('inicio',this)" data-tab="inicio" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:6px;font-size:9px;font-weight:600;color:#2196F3"><span style="font-size:20px">🏠</span>Início</button>
+    <button class="mor-nav-btn" onclick="morNavegar('financeiro',this)" data-tab="financeiro" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:6px;font-size:9px;font-weight:600;color:#94a3b8"><span style="font-size:20px">💰</span>Financeiro</button>
+    <button class="mor-nav-btn" onclick="morNavegar('chamados',this)" data-tab="chamados" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:6px;font-size:9px;font-weight:600;color:#94a3b8"><span style="font-size:20px">🎫</span>Chamados</button>
+    <button class="mor-nav-btn" onclick="morNavegar('comunicados',this)" data-tab="comunicados" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:6px;font-size:9px;font-weight:600;color:#94a3b8"><span style="font-size:20px">📢</span>Avisos</button>
+    <button class="mor-nav-btn" onclick="morNavegar('reservas',this)" data-tab="reservas" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:6px;font-size:9px;font-weight:600;color:#94a3b8"><span style="font-size:20px">📅</span>Reservas</button>
+  </nav>
+</div>
+
+<!-- ÁREA DO MORADOR - LOGIN -->
+<div id="morador-screen" class="hidden" style="min-height:100vh;background:linear-gradient(135deg,#1565C0,#1976D2);display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="width:100%;max-width:400px">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="width:60px;height:60px;background:rgba(255,255,255,.15);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 12px">🏢</div>
+      <div style="font-size:20px;font-weight:800;color:#fff" id="mor-condo-nome">Residencial</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.7)">Área exclusiva do condômino</div>
+    </div>
+    <div style="background:#fff;border-radius:18px;padding:28px 24px;box-shadow:0 24px 48px rgba(0,0,0,.2)">
+      <div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:16px">Acesse sua área</div>
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:5px">CPF ou E-mail</label>
+        <input id="mor-login" class="form-input" placeholder="000.000.000-00 ou email@email.com" onkeydown="if(event.key==='Enter')doLoginMorador()">
+      </div>
+      <div style="margin-bottom:18px">
+        <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:5px">Senha</label>
+        <input id="mor-senha" type="password" class="form-input" placeholder="Sua senha" onkeydown="if(event.key==='Enter')doLoginMorador()">
+      </div>
+      <button onclick="doLoginMorador()" style="width:100%;padding:13px;background:linear-gradient(135deg,#1565C0,#1976D2);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">Entrar</button>
+      <div style="text-align:center;margin-top:14px">
+        <button onclick="voltarLoginPrincipal()" style="background:none;border:none;color:#64748b;font-size:12px;cursor:pointer">← Voltar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ÁREA DO MORADOR - APP -->
+<div id="morador-app" class="hidden" style="min-height:100vh;background:#F0F4F8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <div style="background:linear-gradient(135deg,#1565C0,#1976D2);padding:16px 16px 40px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,.8)" id="mor-app-condo">NexCondo</div>
+      <button onclick="doLogoutMorador()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;cursor:pointer">Sair</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div id="mor-avatar" style="width:48px;height:48px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;flex-shrink:0">?</div>
+      <div>
+        <div id="mor-nome-display" style="font-size:18px;font-weight:800;color:#fff">Morador</div>
+        <div id="mor-apto-display" style="font-size:13px;color:rgba(255,255,255,.7)">Apto --</div>
+      </div>
+    </div>
+  </div>
+  <div style="margin:-24px 16px 16px;background:#fff;border-radius:16px;padding:14px;box-shadow:0 4px 20px rgba(0,0,0,.1)">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">
+      <div>
+        <div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:3px">Status</div>
+        <div id="mor-status-badge" style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;background:#ECFDF5;color:#059669;display:inline-block">Adimplente</div>
+      </div>
+      <div>
+        <div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:3px">Débito</div>
+        <div id="mor-debito-display" style="font-size:15px;font-weight:800;color:#1e293b">R$ 0,00</div>
+      </div>
+      <div>
+        <div style="font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:3px">Unidade</div>
+        <div id="mor-unidade-display" style="font-size:15px;font-weight:800;color:#1e293b">--</div>
+      </div>
+    </div>
+  </div>
+  <div style="padding:0 16px 100px" id="mor-content"></div>
+  <nav style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e2e8f0;display:flex;padding:6px 0;z-index:50">
+    <button class="mor-nav-btn" onclick="morNavegar('inicio',this)" data-tab="inicio" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:6px;font-size:9px;font-weight:600;color:#2196F3"><span style="font-size:20px">🏠</span>Início</button>
+    <button class="mor-nav-btn" onclick="morNavegar('financeiro',this)" data-tab="financeiro" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:6px;font-size:9px;font-weight:600;color:#94a3b8"><span style="font-size:20px">💰</span>Financeiro</button>
+    <button class="mor-nav-btn" onclick="morNavegar('chamados',this)" data-tab="chamados" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:6px;font-size:9px;font-weight:600;color:#94a3b8"><span style="font-size:20px">🎫</span>Chamados</button>
+    <button class="mor-nav-btn" onclick="morNavegar('comunicados',this)" data-tab="comunicados" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:6px;font-size:9px;font-weight:600;color:#94a3b8"><span style="font-size:20px">📢</span>Avisos</button>
+    <button class="mor-nav-btn" onclick="morNavegar('reservas',this)" data-tab="reservas" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:6px;font-size:9px;font-weight:600;color:#94a3b8"><span style="font-size:20px">📅</span>Reservas</button>
+  </nav>
+</div>
+
 </body>
 </html>
