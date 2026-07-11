@@ -855,28 +855,8 @@ const DB = {
     _agendarSync(key, val);
   },
   set(key, val) {
-    // Salvar dado normalmente
     localStorage.setItem('cg3_'+key, JSON.stringify(val));
     _agendarSync(key, val);
-    // Registrar na auditoria de forma assíncrona e segura
-    if(_MODULOS_AUDIT && _MODULOS_AUDIT[key] && _auditEnabled){
-      setTimeout(function(){
-        try{
-          var anterior = JSON.parse(localStorage.getItem('cg3_'+key+'_prev')||'null');
-          var modulo = _MODULOS_AUDIT[key];
-          var acao = '✏️ Editado';
-          if(Array.isArray(val)){
-            var prevArr = anterior;
-            if(!prevArr) acao = '➕ Criado';
-            else if(val.length > prevArr.length) acao = '➕ Adicionado';
-            else if(val.length < prevArr.length) acao = '🗑️ Excluído';
-          } else if(!anterior) {
-            acao = '➕ Criado';
-          }
-          _logAudit(acao, modulo, 'Alteração em '+modulo);
-        }catch(e){}
-      }, 0);
-    }
   },
   init() {
     if(!DB.get('pix'))DB.set('pix',{chave:'',tipo:'email',nome:'',cidade:'',taxa:850});
@@ -935,26 +915,22 @@ function usarCPFSenha(){
 }
 function saveMorador(m){
   const list=getMoradores();
+  var isNovo=!m.id;
   if(m.id){
     const i=list.findIndex(x=>x.id===m.id);
     if(i>=0){
-      // Preservar senha existente se não foi definida uma nova
-      if(m.senha===undefined || m.senha===''){
-        m.senha = list[i].senha || '';
-      }
+      if(m.senha===undefined||m.senha==='') m.senha=list[i].senha||'';
       list[i]=m;
-    } else {
-      list.push(m);
-    }
-  } else {
-    m.id=uid();
-    list.push(m);
-  }
+    } else list.push(m);
+  } else { m.id=uid(); list.push(m); }
   DB.set('moradores',list);
+  setTimeout(function(){_logAudit(isNovo?'➕ Adicionado':'✏️ Editado','Moradores',(isNovo?'Novo morador: ':'Editado: ')+m.nome);},0);
   if(typeof refreshPage==='function')refreshPage();
 }
 function deleteMorador(id){
+  var mor=getMoradores().find(function(m){return m.id===id;});
   DB.set('moradores',getMoradores().filter(m=>m.id!==id));
+  if(mor) setTimeout(function(){_logAudit('🗑️ Excluído','Moradores','Morador excluído: '+mor.nome);},0);
   if(typeof refreshPage==='function')refreshPage();
 }
 
@@ -962,9 +938,11 @@ function deleteMorador(id){
 function getMovimentacoes(){ return DB.get('movimentacoes')||[]; }
 function saveMovimentacao(m){
   const list=getMovimentacoes();
+  var isNovo=!m.id;
   if(m.id){const i=list.findIndex(x=>x.id===m.id);if(i>=0)list[i]=m;else list.unshift(m);}
   else{m.id=uid();list.unshift(m);}
   DB.set('movimentacoes',list);
+  setTimeout(function(){_logAudit(isNovo?'➕ Adicionado':'✏️ Editado','Financeiro',(isNovo?'Nova movimentação: ':'Editado: ')+m.desc+' R$ '+m.valor);},0);
   if(typeof refreshPage==='function')refreshPage();
 }
 function deleteMovimentacao(id,motivo){
@@ -1025,9 +1003,11 @@ function calcDRE(){
 function getComunicados(){ return DB.get('comunicados')||[]; }
 function saveComunicado(c){
   const list=getComunicados();
+  var isNovo=!c.id;
   if(c.id){const i=list.findIndex(x=>x.id===c.id);if(i>=0)list[i]=c;else list.push(c);}
   else{c.id=uid();c.data=hoje();c.lidos=0;list.unshift(c);}
   DB.set('comunicados',list);
+  setTimeout(function(){_logAudit(isNovo?'➕ Adicionado':'✏️ Editado','Comunicados',(isNovo?'Novo: ':'Editado: ')+c.titulo);},0);
 }
 function deleteComunicado(id){ DB.set('comunicados',getComunicados().filter(c=>c.id!==id)); }
 
@@ -1055,11 +1035,17 @@ function deleteAssembleia(id){ DB.set('assembleias',getAssembleias().filter(a=>a
 function getManutencoes(){ return DB.get('manutencoes')||[]; }
 function saveManutencao(m){
   const list=getManutencoes();
+  var isNovo=!m.id;
   if(m.id){const i=list.findIndex(x=>x.id===m.id);if(i>=0)list[i]=m;else list.push(m);}
   else{m.id=uid();m.abertura=hoje();list.unshift(m);}
   DB.set('manutencoes',list);
+  setTimeout(function(){_logAudit(isNovo?'➕ Adicionado':'✏️ Editado','Manutenções',(isNovo?'Novo chamado: ':'Editado: ')+(m.titulo||''));},0);
 }
-function deleteManutencao(id){ DB.set('manutencoes',getManutencoes().filter(m=>m.id!==id)); }
+function deleteManutencao(id){
+  var item=getManutencoes().find(function(m){return m.id===id;});
+  DB.set('manutencoes',getManutencoes().filter(m=>m.id!==id));
+  if(item) setTimeout(function(){_logAudit('🗑️ Excluído','Manutenções','Excluído: '+(item.titulo||''));},0);
+}
 
 // PREVENTIVAS
 function getPreventivas(){ return DB.get('preventivas')||[]; }
