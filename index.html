@@ -924,10 +924,29 @@ function saveConfig(d){ DB.set('config',d); }
 
 // MORADORES
 function getMoradores(){ return DB.get('moradores')||[]; }
+function usarCPFSenha(){
+  var el=document.getElementById('m-cpf');
+  var cpf=el?el.value.replace(/\D/g,'').slice(0,6):'';
+  if(cpf){document.getElementById('m-senha').value=cpf;}
+  else{alert('Digite o CPF primeiro.');}
+}
 function saveMorador(m){
   const list=getMoradores();
-  if(m.id){const i=list.findIndex(x=>x.id===m.id);if(i>=0)list[i]=m;else list.push(m);}
-  else{m.id=uid();list.push(m);}
+  if(m.id){
+    const i=list.findIndex(x=>x.id===m.id);
+    if(i>=0){
+      // Preservar senha existente se não foi definida uma nova
+      if(m.senha===undefined || m.senha===''){
+        m.senha = list[i].senha || '';
+      }
+      list[i]=m;
+    } else {
+      list.push(m);
+    }
+  } else {
+    m.id=uid();
+    list.push(m);
+  }
   DB.set('moradores',list);
   if(typeof refreshPage==='function')refreshPage();
 }
@@ -1359,6 +1378,7 @@ const PAGES={
 
 // ===== PAINEL =====
 painel(){
+  try{
   var cfg=getConfig(),k=calcKpis(),movs=getMovimentacoes();
   var manut=getManutencoes().filter(function(m){return m.status!=='concluído';}).slice(0,3);
   var enc=getEncomendas().filter(function(e){return e.status!=='retirado';}).length;
@@ -1564,6 +1584,17 @@ painel(){
     '</div></div>'+
     '</div>'
   );
+  }catch(e){
+    console.error('Erro no painel:',e);
+    return '<div style="padding:40px;text-align:center">'+
+      '<div style="font-size:48px;margin-bottom:16px">⚠️</div>'+
+      '<div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px">Erro ao carregar o painel</div>'+
+      '<div style="font-size:13px;color:var(--text3);margin-bottom:20px">'+e.message+'</div>'+
+      '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">'+
+      '<button class="btn-send" onclick="sincronizarDoServidor().then(function(){navigate(\'painel\')})">🔄 Sincronizar e tentar novamente</button>'+
+      '<button class="btn-secondary" onclick="navigate(\'financeiro\')">Ver Financeiro</button>'+
+      '</div></div>';
+  }
 },
 
 
@@ -3593,6 +3624,8 @@ function verMorador(id){
   modal('Ficha — '+m.nome,inner,function(){closeModal();});
   document.getElementById('modal-save').textContent='Fechar';
 }function formMorador(m){
+  var senhaAtual = m.senha||'';
+  var isNovo = !m.id;
   return '<div class="form-row">'+
     '<div><label class="form-label">Nome completo *</label><input id="m-nome" class="form-input" value="'+(m.nome||'')+'"></div>'+
     '<div><label class="form-label">Apartamento/Casa Nº *</label><input id="m-apto" class="form-input" value="'+(m.apto||'')+'" placeholder="Ex: 101"></div></div>'+
@@ -3627,12 +3660,33 @@ function verMorador(id){
     '<option value="inadimplente"'+(m.status==='inadimplente'?' selected':'')+'>Inadimplente</option>'+
     '</select></div>'+
     '<div></div></div>'+
+
+    // ── SENHA DA ÁREA DO CONDÔMINO ──
+    '<div style="background:#EFF6FF;border:1.5px solid #BFDBFE;border-radius:10px;padding:14px 16px;margin-bottom:12px">'+
+    '<div style="font-size:12px;font-weight:700;color:#1D4ED8;margin-bottom:10px">🔑 Acesso à Área do Condômino</div>'+
+    '<div class="form-row" style="margin-bottom:8px">'+
+    '<div><label class="form-label" style="color:#1D4ED8">'+( isNovo?'Senha de acesso':'Senha atual: '+(senhaAtual?'<span style="font-family:monospace;background:#DBEAFE;padding:1px 6px;border-radius:4px">'+senhaAtual+'</span>':'<span style="color:#DC2626">Sem senha</span>')+'</label>'+
+    '<div style="position:relative">'+
+    '<input id="m-senha" class="form-input" type="text" value="'+senhaAtual+'" placeholder="Mínimo 4 caracteres (deixe vazio para não definir)" style="padding-right:120px">'+
+    '</div></div>'+
+    '<div style="display:flex;flex-direction:column;gap:5px;justify-content:flex-end">'+
+    '<label class="form-label">Sugestões rápidas</label>'+
+    '<div style="display:flex;gap:5px;flex-wrap:wrap">'+
+    '<button type="button" onclick="document.getElementById(\'m-senha\').value=\'123456\'" style="padding:4px 8px;background:#DBEAFE;border:1px solid #93C5FD;border-radius:6px;font-size:11px;font-weight:600;color:#1D4ED8;cursor:pointer">123456</button>'+
+    '<button type="button" onclick="usarCPFSenha()" style="padding:4px 8px;background:#DBEAFE;border:1px solid #93C5FD;border-radius:6px;font-size:11px;font-weight:600;color:#1D4ED8;cursor:pointer">CPF (6 dig.)</button>'+
+    '<button type="button" onclick="var ap=(document.getElementById(\'m-apto\')||{value:\'\'}).value;if(ap)document.getElementById(\'m-senha\').value=ap;else alert(\'Digite o nº do apto primeiro.\')" style="padding:4px 8px;background:#DBEAFE;border:1px solid #93C5FD;border-radius:6px;font-size:11px;font-weight:600;color:#1D4ED8;cursor:pointer">Nº do apto</button>'+
+    '</div></div></div>'+
+    '<div style="font-size:11px;color:#3B82F6;margin-top:4px">'+
+    (isNovo?'O morador usará esta senha para acessar a Área do Condômino. Ele poderá trocar depois pelo app.':
+    'Altere a senha se necessário. O morador verá a senha antiga como inválida imediatamente após salvar.')+
+    '</div></div>'+
     '<div class="form-full"><label class="form-label">Observações</label>'+
     '<textarea id="m-obs" class="form-textarea">'+(m.obs||'')+'</textarea></div>';
 }
 function getMoradorForm(){
   var nascISO=(document.getElementById('m-nasc')||{value:''}).value;
   var p=nascISO?nascISO.split('-'):[];
+  var senhaVal=((document.getElementById('m-senha')||{value:''}).value||'').trim();
   return {
     nome:(document.getElementById('m-nome')||{value:''}).value.trim(),
     apto:(document.getElementById('m-apto')||{value:''}).value.trim(),
@@ -3649,7 +3703,8 @@ function getMoradorForm(){
     taxaCustom:((document.getElementById('m-taxa')||{value:''}).value||''),
     status:(document.getElementById('m-status')||{value:'adimplente'}).value,
     debito:(document.getElementById('m-debito')||{value:0}).value,
-    obs:((document.getElementById('m-obs')||{value:''}).value||'').trim()
+    obs:((document.getElementById('m-obs')||{value:''}).value||'').trim(),
+    senha: senhaVal || undefined
   };
 }
 
