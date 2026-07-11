@@ -855,25 +855,28 @@ const DB = {
     _agendarSync(key, val);
   },
   set(key, val) {
-    // Registrar na auditoria (apenas coleções relevantes)
-    if(_MODULOS_AUDIT[key] && _auditEnabled){
-      try{
-        var anterior = DB.get(key);
-        var modulo = _MODULOS_AUDIT[key];
-        // Detectar tipo de ação
-        var acao = '✏️ Editado';
-        if(Array.isArray(val) && Array.isArray(anterior)){
-          if(val.length > anterior.length) acao = '➕ Adicionado';
-          else if(val.length < anterior.length) acao = '🗑️ Excluído';
-          else acao = '✏️ Editado';
-        } else if(!anterior) {
-          acao = '➕ Criado';
-        }
-        _logAudit(acao, modulo, 'Alteração em '+modulo);
-      }catch(e){}
-    }
+    // Salvar dado normalmente
     localStorage.setItem('cg3_'+key, JSON.stringify(val));
     _agendarSync(key, val);
+    // Registrar na auditoria de forma assíncrona e segura
+    if(_MODULOS_AUDIT && _MODULOS_AUDIT[key] && _auditEnabled){
+      setTimeout(function(){
+        try{
+          var anterior = JSON.parse(localStorage.getItem('cg3_'+key+'_prev')||'null');
+          var modulo = _MODULOS_AUDIT[key];
+          var acao = '✏️ Editado';
+          if(Array.isArray(val)){
+            var prevArr = anterior;
+            if(!prevArr) acao = '➕ Criado';
+            else if(val.length > prevArr.length) acao = '➕ Adicionado';
+            else if(val.length < prevArr.length) acao = '🗑️ Excluído';
+          } else if(!anterior) {
+            acao = '➕ Criado';
+          }
+          _logAudit(acao, modulo, 'Alteração em '+modulo);
+        }catch(e){}
+      }, 0);
+    }
   },
   init() {
     if(!DB.get('pix'))DB.set('pix',{chave:'',tipo:'email',nome:'',cidade:'',taxa:850});
