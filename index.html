@@ -6674,35 +6674,76 @@ function doLoginMorador(){
   var login=document.getElementById('mor-login').value.trim();
   var senha=document.getElementById('mor-senha').value;
   if(!login||!senha){alert('Preencha o CPF/e-mail e a senha.');return;}
-  var mors=getMoradores();
-  var loginLower=login.toLowerCase().trim();
-  var loginNumeros=login.replace(/\D/g,'');
-  var mor=mors.find(function(m){
-    var emailOk=m.email&&m.email.toLowerCase().trim()===loginLower;
-    var cpfOk=loginNumeros.length>=6&&(m.cpf||'').replace(/\D/g,'')===loginNumeros;
-    var senhaOk=m.senha===senha;
-    var ativoOk=m.ativo!==false;
-    return (emailOk||cpfOk)&&senhaOk&&ativoOk;
-  });
-  if(!mor){alert('CPF/e-mail ou senha incorretos.');return;}
-  _moradorAtual=mor;
-  var cfg=getConfig();
-  var ini=(mor.nome||'M').split(' ').map(function(n){return n[0]||'';}).join('').slice(0,2).toUpperCase();
-  document.getElementById('mor-avatar').textContent=ini;
-  document.getElementById('mor-nome-display').textContent=mor.nome||'Morador';
-  document.getElementById('mor-apto-display').textContent='Apto '+(mor.apto||'--');
-  document.getElementById('mor-app-condo').textContent=cfg.nome||'NexCondo';
-  document.getElementById('mor-unidade-display').textContent=mor.apto||'--';
-  document.getElementById('mor-debito-display').textContent='R$ '+Number(mor.debito||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
-  var badge=document.getElementById('mor-status-badge');
-  if(mor.status==='inadimplente'){
-    badge.textContent='Inadimplente';badge.style.background='#FEF2F2';badge.style.color='#DC2626';
-  } else {
-    badge.textContent='Adimplente';badge.style.background='#ECFDF5';badge.style.color='#059669';
+
+  var btnLogin=document.querySelector('#morador-screen button[onclick="doLoginMorador()"]');
+  if(btnLogin){btnLogin.textContent='Verificando...';btnLogin.disabled=true;}
+
+  function _tentarLoginMorador(){
+    var mors=getMoradores();
+    var loginLower=login.toLowerCase().trim();
+    var loginNumeros=login.replace(/\D/g,'');
+    var mor=mors.find(function(m){
+      var emailOk=m.email&&m.email.toLowerCase().trim()===loginLower;
+      var cpfOk=loginNumeros.length>=6&&(m.cpf||'').replace(/\D/g,'')===loginNumeros;
+      var senhaOk=(m.senha||'')===senha;
+      var ativoOk=m.ativo!==false;
+      return (emailOk||cpfOk)&&senhaOk&&ativoOk;
+    });
+    if(btnLogin){btnLogin.textContent='Entrar';btnLogin.disabled=false;}
+    if(!mor){
+      // Diagnóstico útil
+      var existe=mors.find(function(m){
+        var emailOk=m.email&&m.email.toLowerCase().trim()===loginLower;
+        var cpfOk=loginNumeros.length>=6&&(m.cpf||'').replace(/\D/g,'')===loginNumeros;
+        return emailOk||cpfOk;
+      });
+      if(existe){
+        alert('Senha incorreta para este usuário.\n\nSe esqueceu a senha, peça ao síndico para redefinir.');
+      } else {
+        alert('CPF/e-mail não encontrado.\n\nVerifique se digitou corretamente ou peça ao síndico para verificar seu cadastro.');
+      }
+      return;
+    }
+    _moradorAtual=mor;
+    var cfg=getConfig();
+    var ini=(mor.nome||'M').split(' ').map(function(n){return n[0]||'';}).join('').slice(0,2).toUpperCase();
+    document.getElementById('mor-avatar').textContent=ini;
+    document.getElementById('mor-nome-display').textContent=mor.nome||'Morador';
+    document.getElementById('mor-apto-display').textContent='Apto '+(mor.apto||'--');
+    document.getElementById('mor-app-condo').textContent=cfg.nome||'NexCondo';
+    document.getElementById('mor-unidade-display').textContent=mor.apto||'--';
+    document.getElementById('mor-debito-display').textContent='R$ '+Number(mor.debito||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+    var badge=document.getElementById('mor-status-badge');
+    if(mor.status==='inadimplente'){
+      badge.textContent='Inadimplente';badge.style.background='#FEF2F2';badge.style.color='#DC2626';
+    } else {
+      badge.textContent='Adimplente';badge.style.background='#ECFDF5';badge.style.color='#059669';
+    }
+    document.getElementById('morador-screen').classList.add('hidden');
+    document.getElementById('morador-app').classList.remove('hidden');
+    morNavegar('inicio',null);
   }
-  document.getElementById('morador-screen').classList.add('hidden');
-  document.getElementById('morador-app').classList.remove('hidden');
-  morNavegar('inicio',null);
+
+  // Buscar dados atualizados do Supabase antes de validar
+  var SUPA_URL='https://wovesiyhholprfbhyaxz.supabase.co';
+  var SUPA_KEY='sb_publishable_O2W-ONXXWjDoXSg7Ui6P3g_Eg61DBZd';
+  var CONDO_ID='residencial-ana-silva';
+  Promise.all([
+    fetch(SUPA_URL+'/rest/v1/dados_condominio?condo_id=eq.'+CONDO_ID+'&chave=eq.moradores&select=valor',
+      {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}}).then(function(r){return r.json();}).catch(function(){return [];}),
+    fetch(SUPA_URL+'/rest/v1/dados_condominio?condo_id=eq.'+CONDO_ID+'&chave=eq.config&select=valor',
+      {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}}).then(function(r){return r.json();}).catch(function(){return [];})
+  ]).then(function(results){
+    if(results[0]&&results[0].length&&results[0][0].valor){
+      localStorage.setItem('cg3_moradores',JSON.stringify(results[0][0].valor));
+    }
+    if(results[1]&&results[1].length&&results[1][0].valor){
+      localStorage.setItem('cg3_config',JSON.stringify(results[1][0].valor));
+    }
+    _tentarLoginMorador();
+  }).catch(function(){
+    _tentarLoginMorador();
+  });
 }
 
 function doLogoutMorador(){
