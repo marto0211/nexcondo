@@ -1368,87 +1368,145 @@ var PAGES={
 // ===== PAINEL =====
 painel(){
   try {
-    var cfg=getConfig();
-    var k=calcKpis();
-    var movs=getMovimentacoes();
+    var cfg=getConfig(), k=calcKpis(), movs=getMovimentacoes();
+    var mors=getMoradores(), manut=getManutencoes().filter(function(m){return m.status!=='concluído';});
     var fmtR=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});};
     var saldo=k.saldoCaixa||0;
 
-    // KPIs simples
-    var kpis='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">'+
-      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;border-top:3px solid #2196F3">'+
-      '<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700;margin-bottom:6px">Receitas mês</div>'+
-      '<div style="font-size:22px;font-weight:800;color:#1e293b">'+fmtR(k.receitas)+'</div>'+
-      '</div>'+
-      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;border-top:3px solid #FF9800">'+
-      '<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700;margin-bottom:6px">Despesas mês</div>'+
-      '<div style="font-size:22px;font-weight:800;color:#1e293b">'+fmtR(k.despesas)+'</div>'+
-      '</div>'+
-      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;border-top:3px solid #FFD740">'+
-      '<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700;margin-bottom:6px">A Receber</div>'+
-      '<div style="font-size:22px;font-weight:800;color:#D97706">'+fmtR(k.aReceber)+'</div>'+
-      '</div>'+
-      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;border-top:3px solid '+(k.inadimplentes>0?'#DC2626':'#059669')+'">'+
-      '<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700;margin-bottom:6px">Inadimplentes</div>'+
-      '<div style="font-size:22px;font-weight:800;color:'+(k.inadimplentes>0?'#DC2626':'#059669')+'">'+k.inadimplentes+'</div>'+
-      '</div>'+
-      '</div>';
+    // ── GRÁFICO LINHA 6 MESES ──
+    var mesesLabels=[], recArr=[], despArr=[];
+    for(var mm=5;mm>=0;mm--){
+      var d=new Date(); d.setMonth(d.getMonth()-mm);
+      var mes=d.getMonth(), ano=d.getFullYear();
+      mesesLabels.push(d.toLocaleString('pt-BR',{month:'short'}));
+      var rec=0, desp=0;
+      movs.forEach(function(mv){
+        var md=new Date(mv.dataISO||mv.data);
+        if(isNaN(md)) return;
+        if(md.getMonth()===mes&&md.getFullYear()===ano){
+          if(mv.tipo==='receita'&&mv.status==='pago') rec+=Number(mv.valor||0);
+          else if(mv.tipo==='despesa'&&mv.status==='pago') desp+=Number(mv.valor||0);
+        }
+      });
+      recArr.push(rec); despArr.push(desp);
+    }
+    var maxVal=Math.max.apply(null,recArr.concat(despArr))||1;
+    var svgH=120, svgW=400, pad=30;
+    var pts=function(arr){
+      return arr.map(function(v,i){
+        var x=pad+(i*(svgW-pad*2)/(arr.length-1||1));
+        var y=svgH-pad-(v/maxVal*(svgH-pad*2));
+        return x.toFixed(1)+','+y.toFixed(1);
+      }).join(' ');
+    };
+    var graficoLinha='<svg viewBox="0 0 '+svgW+' '+svgH+'" style="width:100%;height:120px">'+
+      '<defs><linearGradient id="gr" x1="0" y1="0" x2="0" y2="1">'+
+      '<stop offset="0%" stop-color="#4CAF50" stop-opacity="0.2"/><stop offset="100%" stop-color="#4CAF50" stop-opacity="0"/></linearGradient></defs>'+
+      '<polyline points="'+pts(recArr)+'" fill="none" stroke="#4CAF50" stroke-width="2.5" stroke-linejoin="round"/>'+
+      '<polyline points="'+pts(despArr)+'" fill="none" stroke="#FF5252" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="4,3"/>'+
+      mesesLabels.map(function(l,i){
+        var x=pad+(i*(svgW-pad*2)/(mesesLabels.length-1||1));
+        return '<text x="'+x.toFixed(1)+'" y="'+(svgH-8)+'" text-anchor="middle" font-size="9" fill="#94a3b8">'+l+'</text>';
+      }).join('')+'</svg>';
 
-    // Movimentações recentes
+    // ── DONUT ADIMPLÊNCIA ──
+    var total=mors.length||1;
+    var inad=mors.filter(function(m){return m.status==='inadimplente';}).length;
+    var adim=total-inad;
+    var pct=Math.round((adim/total)*100);
+    var r1=24, circ=2*Math.PI*r1;
+    var dash=circ*(adim/total);
+    var donut='<svg width="70" height="70" viewBox="0 0 70 70">'+
+      '<circle cx="35" cy="35" r="'+r1+'" fill="none" stroke="#E2E8F0" stroke-width="8"/>'+
+      '<circle cx="35" cy="35" r="'+r1+'" fill="none" stroke="#4CAF50" stroke-width="8"'+
+      ' stroke-dasharray="'+dash.toFixed(1)+' '+circ.toFixed(1)+'"'+
+      ' stroke-dashoffset="'+((circ/4)).toFixed(1)+'" stroke-linecap="round" transform="rotate(-90 35 35)"/>'+
+      '<text x="35" y="39" text-anchor="middle" font-size="13" font-weight="800" fill="#1e293b">'+pct+'%</text></svg>';
+
+    // ── MOVIMENTAÇÕES RECENTES ──
     var movs5=movs.slice().sort(function(a,b){return (b.dataISO||'').localeCompare(a.dataISO||'');}).slice(0,5);
     var movHTML=movs5.length?movs5.map(function(m){
-      var isRec=m.tipo==='receita';
-      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9">'+
-        '<div style="width:32px;height:32px;border-radius:8px;background:'+(isRec?'#E3F2FD':'#FFF3E0')+';display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">'+(isRec?'💰':'💸')+'</div>'+
-        '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m.desc+'</div>'+
-        '<div style="font-size:11px;color:#94a3b8">'+m.data+'</div></div>'+
-        '<div style="font-size:13px;font-weight:700;color:'+(isRec?'#059669':'#DC2626')+'">'+(isRec?'+':'-')+fmtR(m.valor)+'</div>'+
-        '</div>';
-    }).join(''):'<div style="padding:20px;text-align:center;color:#94a3b8">Nenhuma movimentação</div>';
+      var isR=m.tipo==='receita';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9">'+
+        '<div style="width:30px;height:30px;border-radius:8px;background:'+(isR?'#E8F5E9':'#FFF3E0')+';display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">'+(isR?'💰':'💸')+'</div>'+
+        '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m.desc+'</div>'+
+        '<div style="font-size:10px;color:#94a3b8">'+m.data+'</div></div>'+
+        '<div style="font-size:12px;font-weight:700;color:'+(isR?'#059669':'#DC2626')+'">'+(isR?'+':'-')+fmtR(m.valor)+'</div></div>';
+    }).join(''):'<div style="padding:20px;text-align:center;color:#94a3b8;font-size:12px">Nenhuma movimentação</div>';
 
-    // Alertas
-    var alertas='';
-    if(k.inadimplentes>0) alertas+='<div style="padding:10px 12px;background:#FFF7ED;border-left:3px solid #FF9800;border-radius:6px;margin-bottom:8px;font-size:12px;font-weight:500;color:#92400E">⚠️ '+k.inadimplentes+' inadimplente(s) — débito: '+fmtR(k.debitoTotal)+'</div>';
-    if(saldo<0) alertas+='<div style="padding:10px 12px;background:#FEF2F2;border-left:3px solid #DC2626;border-radius:6px;margin-bottom:8px;font-size:12px;font-weight:500;color:#991B1B">🔴 Caixa negativo: '+fmtR(Math.abs(saldo))+'</div>';
-    if(!alertas) alertas='<div style="padding:10px 12px;background:#ECFDF5;border-left:3px solid #059669;border-radius:6px;font-size:12px;font-weight:500;color:#065F46">✅ Tudo em ordem!</div>';
+    // ── ALERTAS ──
+    var alertas=[];
+    if(k.inadimplentes>0) alertas.push('<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#FFF7ED;border-left:3px solid #FF9800;border-radius:6px;font-size:12px;font-weight:500;color:#92400E;margin-bottom:6px">⚠️ '+k.inadimplentes+' inadimplente(s) — débito: '+fmtR(k.debitoTotal)+'</div>');
+    if(saldo<0) alertas.push('<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#FEF2F2;border-left:3px solid #DC2626;border-radius:6px;font-size:12px;font-weight:500;color:#991B1B;margin-bottom:6px">🔴 Caixa negativo: '+fmtR(Math.abs(saldo))+'</div>');
+    if(manut.length>0) alertas.push('<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#EFF6FF;border-left:3px solid #2196F3;border-radius:6px;font-size:12px;font-weight:500;color:#1D4ED8;margin-bottom:6px">🔧 '+manut.length+' manutenção(ões) em aberto</div>');
+    if(!alertas.length) alertas.push('<div style="padding:8px 10px;background:#ECFDF5;border-left:3px solid #059669;border-radius:6px;font-size:12px;font-weight:500;color:#065F46;margin-bottom:6px">✅ Tudo em ordem!</div>');
 
     return (
-      // Banner saldo
-      '<div style="background:linear-gradient(135deg,#1565C0,#1976D2);border-radius:12px;padding:16px 20px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">'+
-      '<div><div style="font-size:10px;color:rgba(255,255,255,.85);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:4px">💰 Saldo em Caixa</div>'+
-      '<div style="font-size:28px;font-weight:800;color:'+(saldo>=0?'#69F0AE':'#FF5252')+'">'+fmtR(saldo)+'</div></div>'+
-      '<div style="display:flex;gap:16px">'+
-      '<div><div style="font-size:9px;color:rgba(255,255,255,.8);text-transform:uppercase;margin-bottom:2px">Recebido</div><div style="font-size:14px;font-weight:700;color:#fff">'+fmtR(k.recPago||0)+'</div></div>'+
-      '<div><div style="font-size:9px;color:rgba(255,255,255,.8);text-transform:uppercase;margin-bottom:2px">Despesas</div><div style="font-size:14px;font-weight:700;color:#FFAB40">'+fmtR(k.despPago||0)+'</div></div>'+
+      // BANNER SALDO
+      '<div style="background:linear-gradient(135deg,#1565C0,#1976D2);border-radius:14px;padding:18px 22px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">'+
+      '<div><div style="font-size:10px;color:rgba(255,255,255,.85);text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:4px">💰 Saldo em Caixa</div>'+
+      '<div style="font-size:30px;font-weight:900;color:'+(saldo>=0?'#69F0AE':'#FF5252')+'">'+fmtR(saldo)+'</div></div>'+
+      '<div style="display:flex;gap:20px;flex-wrap:wrap">'+
+      '<div><div style="font-size:9px;color:rgba(255,255,255,.7);text-transform:uppercase;margin-bottom:3px">✅ Recebido</div><div style="font-size:15px;font-weight:700;color:#fff">'+fmtR(k.recPago||0)+'</div></div>'+
+      '<div><div style="font-size:9px;color:rgba(255,255,255,.7);text-transform:uppercase;margin-bottom:3px">💸 Despesas</div><div style="font-size:15px;font-weight:700;color:#FFAB40">'+fmtR(k.despPago||0)+'</div></div>'+
+      '<div><div style="font-size:9px;color:rgba(255,255,255,.7);text-transform:uppercase;margin-bottom:3px">⏳ A Receber</div><div style="font-size:15px;font-weight:700;color:#FFD740">'+fmtR(k.aReceber||0)+'</div></div>'+
       '</div></div>'+
 
       // KPIs
-      kpis+
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">'+
+      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;border-top:3px solid #2196F3">'+
+      '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:700;margin-bottom:5px">Receitas mês</div>'+
+      '<div style="font-size:20px;font-weight:800;color:#1e293b">'+fmtR(k.receitas)+'</div></div>'+
+      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;border-top:3px solid #FF5252">'+
+      '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:700;margin-bottom:5px">Despesas mês</div>'+
+      '<div style="font-size:20px;font-weight:800;color:#1e293b">'+fmtR(k.despesas)+'</div></div>'+
+      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;border-top:3px solid #FFD740">'+
+      '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:700;margin-bottom:5px">A Receber</div>'+
+      '<div style="font-size:20px;font-weight:800;color:#D97706">'+fmtR(k.aReceber)+'</div></div>'+
+      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;border-top:3px solid '+(k.inadimplentes>0?'#DC2626':'#059669')+'">'+
+      '<div style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:700;margin-bottom:5px">Inadimplentes</div>'+
+      '<div style="font-size:20px;font-weight:800;color:'+(k.inadimplentes>0?'#DC2626':'#059669')+'">'+k.inadimplentes+'</div></div>'+
+      '</div>'+
 
-      // Linha inferior: movimentações + alertas
-      '<div style="display:grid;grid-template-columns:1.5fr 1fr;gap:12px">'+
+      // GRÁFICO + ADIMPLÊNCIA
+      '<div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:14px">'+
       '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
-      '<div style="font-size:13px;font-weight:700;color:#1e293b">Movimentações recentes</div>'+
+      '<div style="font-size:13px;font-weight:700;color:#1e293b">📈 Receitas x Despesas (6 meses)</div>'+
+      '<div style="display:flex;gap:10px;font-size:10px"><span style="color:#4CAF50">▬ Receitas</span><span style="color:#FF5252">╌ Despesas</span></div></div>'+
+      graficoLinha+'</div>'+
+      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">'+
+      '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:12px">👥 Adimplência</div>'+
+      donut+
+      '<div style="margin-top:8px;font-size:11px;color:#64748b">'+adim+' adimplentes<br>'+inad+' inadimplentes</div></div>'+
+      '</div>'+
+
+      // MOVIMENTAÇÕES + ALERTAS E ATALHOS
+      '<div style="display:grid;grid-template-columns:3fr 2fr;gap:12px">'+
+      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+      '<div style="font-size:13px;font-weight:700;color:#1e293b">Últimas movimentações</div>'+
       '<button onclick="navigate(\'financeiro\')" style="font-size:11px;color:#2196F3;background:none;border:none;cursor:pointer;font-weight:600">Ver todas →</button>'+
       '</div>'+movHTML+'</div>'+
-      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">'+
+      '<div>'+
+      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:10px">'+
       '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:10px">🎯 Alertas</div>'+
-      alertas+
-      '<div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">'+
-      '<button onclick="navigate(\'financeiro\')" style="padding:8px;background:#F0F4F8;border:1px solid #E2E8F0;border-radius:8px;font-size:12px;font-weight:500;color:#374151;cursor:pointer;text-align:left">💰 Lançar movimentação</button>'+
-      '<button onclick="navigate(\'moradores\')" style="padding:8px;background:#F0F4F8;border:1px solid #E2E8F0;border-radius:8px;font-size:12px;font-weight:500;color:#374151;cursor:pointer;text-align:left">👥 Ver moradores</button>'+
-      '<button onclick="navigate(\'comunicados\')" style="padding:8px;background:#F0F4F8;border:1px solid #E2E8F0;border-radius:8px;font-size:12px;font-weight:500;color:#374151;cursor:pointer;text-align:left">📢 Comunicados</button>'+
-      '</div></div></div>'
+      alertas.join('')+'</div>'+
+      '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px">'+
+      '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:10px">⚡ Ações rápidas</div>'+
+      '<div style="display:flex;flex-direction:column;gap:6px">'+
+      '<button onclick="navigate(\'financeiro\')" style="padding:8px 10px;background:#F0F4F8;border:1px solid #E2E8F0;border-radius:8px;font-size:12px;font-weight:500;color:#374151;cursor:pointer;text-align:left">💰 Lançar movimentação</button>'+
+      '<button onclick="navigate(\'moradores\')" style="padding:8px 10px;background:#F0F4F8;border:1px solid #E2E8F0;border-radius:8px;font-size:12px;font-weight:500;color:#374151;cursor:pointer;text-align:left">👥 Ver moradores</button>'+
+      '<button onclick="navigate(\'comunicados\')" style="padding:8px 10px;background:#F0F4F8;border:1px solid #E2E8F0;border-radius:8px;font-size:12px;font-weight:500;color:#374151;cursor:pointer;text-align:left">📢 Comunicados</button>'+
+      '<button onclick="navigate(\'inadimplentes\')" style="padding:8px 10px;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;font-size:12px;font-weight:500;color:#991B1B;cursor:pointer;text-align:left">⚠️ Ver inadimplentes</button>'+
+      '</div></div></div></div>'
     );
   } catch(e) {
     console.error('Painel erro:', e);
-    return '<div style="padding:40px;text-align:center">'+
-      '<div style="font-size:40px;margin-bottom:12px">⚠️</div>'+
+    return '<div style="padding:40px;text-align:center"><div style="font-size:40px;margin-bottom:12px">⚠️</div>'+
       '<div style="font-size:15px;font-weight:600;color:#1e293b;margin-bottom:6px">Erro no painel</div>'+
       '<div style="font-size:12px;color:#94a3b8;margin-bottom:16px">'+e.message+'</div>'+
-      '<button onclick="sincronizarDoServidor().then(function(){navigate(\'painel\')})" style="padding:10px 20px;background:#2196F3;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">🔄 Sincronizar e tentar novamente</button>'+
-      '</div>';
+      '<button onclick="location.reload()" style="padding:10px 20px;background:#2196F3;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">🔄 Recarregar</button></div>';
   }
 },
 
@@ -1630,37 +1688,41 @@ inadimplentes(){
 moradores(){
   const list=getMoradores().slice().sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
   const semSenha=list.filter(m=>!m.senha).length;
-  const rows=list.length?list.map((m,i)=>`
-    <tr>
-      <td><div class="person-cell"><div class="avatar ${avColor(i)}">${initials(m.nome)}</div><div><div class="person-name">${m.nome}</div><div class="person-apt">${m.tipoImovel==='Casa'?'Casa':'Apto'} ${m.apto}</div></div></div></td>
-      <td>${m.tipo||'-'}</td><td>${m.telefone||'-'}</td>
+  const logSenhas=DB.get('logSenhas')||[];
+
+  const rows=list.length?list.map((m,i)=>{
+    const ultimaTroca=logSenhas.find(l=>l.moradorId===m.id);
+    const senhaDisplay=m.senha
+      ?`<div style="display:flex;align-items:center;gap:6px">
+          <code style="background:#DBEAFE;color:#1D4ED8;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:600">${m.senha}</code>
+          ${ultimaTroca?`<span style="font-size:9px;color:#64748b" title="Última troca: ${ultimaTroca.data} ${ultimaTroca.hora}">🔄 ${ultimaTroca.data}</span>`:''}
+        </div>`
+      :`<span style="font-size:10px;background:#FEF2F2;color:#DC2626;padding:2px 8px;border-radius:6px;font-weight:600">⚠️ Sem senha</span>`;
+    return `<tr>
+      <td><div class="person-cell"><div class="avatar ${avColor(i)}">${initials(m.nome)}</div>
+        <div><div class="person-name">${m.nome}</div>
+        <div class="person-apt">${m.tipoImovel==='Casa'?'Casa':'Apto'} ${m.apto}${m.email?` · <span style="color:#64748b;font-size:10px">${m.email}</span>`:''}</div></div></div></td>
+      <td>${m.telefone||'-'}</td>
       <td><span class="badge ${m.status==='adimplente'?'b-pago':'b-atrasado'}">${m.status==='adimplente'?'Adimplente':'Inadimplente'}</span></td>
-      <td style="text-align:center">
-        ${m.senha
-          ?`<span style="font-size:10px;background:#ECFDF5;color:#059669;padding:2px 8px;border-radius:10px;font-weight:600">✅ Tem senha</span>`
-          :`<span style="font-size:10px;background:#FEF2F2;color:#DC2626;padding:2px 8px;border-radius:10px;font-weight:600">⚠️ Sem senha</span>`
-        }
-      </td>
+      <td>${senhaDisplay}</td>
       <td>
-        <button class="card-action" onclick="verMorador('${m.id}')">👁</button>
-        <button class="card-action" onclick="editarMorador('${m.id}')">✏️</button>
-        <button class="card-action" onclick="definirSenhaMorador('${m.id}','${m.nome.replace(/'/g,'')}')">🔑</button>
-        <button class="card-action" style="color:var(--danger)" onclick="confirmDelete('Excluir ${m.nome}?',()=>{deleteMorador('${m.id}');navigate('moradores')})">🗑</button>
+        <button class="card-action" onclick="editarMorador('${m.id}')" title="Editar">✏️</button>
+        <button class="card-action" onclick="definirSenhaMorador('${m.id}','${m.nome.replace(/'/g,"")}')" title="Alterar senha">🔑</button>
+        <button class="card-action" style="color:var(--danger)" onclick="confirmDelete('Excluir ${m.nome}?',()=>{deleteMorador('${m.id}');navigate('moradores')})" title="Excluir">🗑</button>
       </td>
-    </tr>`).join(''):`<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">Nenhum morador cadastrado.</td></tr>`;
+    </tr>`;
+  }).join('') : `<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:24px">Nenhum morador cadastrado.</td></tr>`;
+
   return`
     ${semSenha>0?`
     <div class="card" style="border-top:3px solid #FF9800;margin-bottom:12px">
       <div class="card-header">
-        <div class="card-title">⚠️ ${semSenha} morador(es) sem senha cadastrada</div>
-        <button class="btn-send" onclick="definirSenhaTodos()">🔑 Definir senha para todos</button>
+        <div class="card-title">⚠️ ${semSenha} morador(es) sem senha</div>
+        <button class="btn-send" onclick="definirSenhaTodos()">🔑 Definir senha padrão para todos</button>
       </div>
-      <div style="font-size:13px;color:var(--text3)">
-        Sem senha, o morador não consegue acessar a Área do Condômino. 
-        Clique em <strong>"Definir senha para todos"</strong> para cadastrar uma senha padrão de uma vez, 
-        ou clique em 🔑 em cada morador individualmente.
-      </div>
+      <div style="font-size:13px;color:var(--text3)">Sem senha o morador não acessa a Área do Condômino. Clique em 🔑 na linha do morador ou defina uma senha padrão para todos.</div>
     </div>`:''}
+
     <div class="card">
       <div class="card-header">
         <div class="card-title">👥 Moradores — ${list.length} cadastrados</div>
@@ -1669,8 +1731,32 @@ moradores(){
           <button class="btn-send" onclick="novoMorador()">+ Adicionar</button>
         </div>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>Morador</th><th>Tipo</th><th>Telefone</th><th>Situação</th><th>Senha</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
-    </div>`;
+      <div style="font-size:11px;color:#64748b;margin-bottom:10px;background:#F8FAFC;padding:8px 12px;border-radius:8px">
+        🔑 A coluna <strong>Senha</strong> mostra a senha atual de cada morador. Clique em 🔑 para alterar. Data da última troca aparece ao lado.
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Morador</th><th>Telefone</th><th>Situação</th><th>Senha de acesso</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    </div>
+
+    ${logSenhas.length?`
+    <div class="card" style="border-top:3px solid #6366F1;margin-top:12px">
+      <div class="card-header"><div class="card-title">🔄 Histórico de trocas de senha</div>
+        <span style="font-size:11px;color:#64748b">Visível apenas para administradores</span></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Data</th><th>Hora</th><th>Morador</th><th>Senha anterior</th><th>Nova senha</th></tr></thead>
+        <tbody>${logSenhas.slice(0,15).map(l=>`
+          <tr>
+            <td style="font-size:12px">${l.data}</td>
+            <td style="font-size:12px">${l.hora}</td>
+            <td style="font-weight:500">${l.nome} <span style="color:#64748b;font-size:11px">Apto ${l.apto}</span></td>
+            <td><code style="background:#FEF2F2;color:#DC2626;padding:2px 8px;border-radius:4px;font-size:12px">${l.senhaAnterior}</code></td>
+            <td><code style="background:#ECFDF5;color:#059669;padding:2px 8px;border-radius:4px;font-size:12px">${l.senhaNova}</code></td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+    </div>`:''}`;
 },
 
 // ===== COMUNICADOS =====
@@ -6589,10 +6675,14 @@ function doLoginMorador(){
   var senha=document.getElementById('mor-senha').value;
   if(!login||!senha){alert('Preencha o CPF/e-mail e a senha.');return;}
   var mors=getMoradores();
+  var loginLower=login.toLowerCase().trim();
+  var loginNumeros=login.replace(/\D/g,'');
   var mor=mors.find(function(m){
-    var cpf=(m.cpf||'').replace(/\D/g,'');
-    var ll=login.replace(/\D/g,'');
-    return (m.email===login||cpf===ll)&&m.senha===senha&&m.ativo!==false;
+    var emailOk=m.email&&m.email.toLowerCase().trim()===loginLower;
+    var cpfOk=loginNumeros.length>=6&&(m.cpf||'').replace(/\D/g,'')===loginNumeros;
+    var senhaOk=m.senha===senha;
+    var ativoOk=m.ativo!==false;
+    return (emailOk||cpfOk)&&senhaOk&&ativoOk;
   });
   if(!mor){alert('CPF/e-mail ou senha incorretos.');return;}
   _moradorAtual=mor;
@@ -6708,20 +6798,53 @@ function morNavegar(aba,btn){
         (cfg.telefone?'<a href="https://wa.me/55'+cfg.telefone.replace(/\D/g,'')+'" target="_blank" style="display:block;padding:11px;background:#25D366;color:#fff;border-radius:8px;text-align:center;font-size:13px;font-weight:600;text-decoration:none;margin-top:8px">Falar com o sindico no WhatsApp</a>':''));
 
   } else if(aba==='financeiro'){
-    var movsMor=(DB.get('movimentacoes')||[]).filter(function(m){return m.apto===mor.apto||m.moradorId===mor.id;});
+    var movsMor=(DB.get('movimentacoes')||[]).filter(function(m){return (m.apto===mor.apto||m.moradorId===mor.id)&&m.tipo==='receita';});
+    var fmtR2=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});};
+
+    // Gráfico de barras — últimos 6 meses
+    var barras=[];
+    for(var bm=5;bm>=0;bm--){
+      var bd=new Date(); bd.setMonth(bd.getMonth()-bm);
+      var bmes=bd.getMonth(), bano=bd.getFullYear();
+      var blabel=bd.toLocaleString('pt-BR',{month:'short'});
+      var btotal=0;
+      movsMor.forEach(function(mv){
+        var md2=new Date(mv.dataISO||mv.data);
+        if(!isNaN(md2)&&md2.getMonth()===bmes&&md2.getFullYear()===bano&&mv.status==='pago') btotal+=Number(mv.valor||0);
+      });
+      barras.push({label:blabel,val:btotal});
+    }
+    var bmax=Math.max.apply(null,barras.map(function(b){return b.val;}))||1;
+    var bW=280, bH=90, bPad=22, bBarW=30, bGap=6;
+    var graficoBarras='<svg viewBox="0 0 '+bW+' '+bH+'" style="width:100%;height:90px">'+
+      barras.map(function(b,i){
+        var x=bPad+i*(bBarW+bGap);
+        var barH=Math.max(2,((b.val/bmax)*(bH-bPad-10)));
+        var y=bH-bPad-barH;
+        var cor=b.val>0?'#2196F3':'#E2E8F0';
+        return '<rect x="'+x+'" y="'+y+'" width="'+bBarW+'" height="'+barH+'" rx="4" fill="'+cor+'"/>'+
+          '<text x="'+(x+bBarW/2)+'" y="'+(bH-6)+'" text-anchor="middle" font-size="8" fill="#94a3b8">'+b.label+'</text>'+
+          (b.val>0?'<text x="'+(x+bBarW/2)+'" y="'+(y-3)+'" text-anchor="middle" font-size="7" fill="#1D4ED8">'+fmtR2(b.val)+'</text>':'');
+      }).join('')+'</svg>';
+
+    var totalPago=movsMor.reduce(function(s,m){return s+Number(m.valor||0);},0);
     content.innerHTML=
-      card('Meu extrato',movsMor.length?movsMor.slice(0,10).map(function(mv){
-        var isRec=mv.tipo==='receita';
-        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9">'+
-          '<div style="width:36px;height:36px;border-radius:10px;background:'+(isRec?'#E3F2FD':'#FFF3E0')+';display:flex;align-items:center;justify-content:center;font-size:16px">'+(isRec?'💰':'💸')+'</div>'+
-          '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+mv.desc+'</div>'+
-          '<div style="font-size:11px;color:#64748b">'+mv.data+'</div></div>'+
-          '<div style="font-size:13px;font-weight:700;color:'+(isRec?'#059669':'#DC2626')+'">'+(isRec?'+':'-')+fmtR(mv.valor)+'</div></div>';
-      }).join(''):'<div style="text-align:center;color:#94a3b8;padding:16px">Sem lancamentos</div>','#2196F3')+
-      (pix.chave?card('Pagar taxa',
-        '<div style="font-size:12px;color:#64748b;margin-bottom:8px">Chave Pix: <strong>'+pix.chave+'</strong></div>'+
-        '<button onclick="copiarPix()" style="width:100%;padding:11px;background:#1565C0;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Copiar chave Pix</button>',
-        '#059669'):'');
+      card('📊 Meu histórico de pagamentos',
+        '<div style="background:#EFF6FF;border-radius:10px;padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">'+
+        '<div><div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700">Total pago</div>'+
+        '<div style="font-size:18px;font-weight:800;color:#1D4ED8">'+fmtR2(totalPago)+'</div></div>'+
+        '<div><div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700">Pagamentos</div>'+
+        '<div style="font-size:18px;font-weight:800;color:#1e293b">'+movsMor.length+'</div></div></div>'+
+        '<div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:6px">Últimos 6 meses</div>'+
+        graficoBarras,'#2196F3')+
+      card('📋 Meu extrato',(movsMor.length?movsMor.slice(0,10).map(function(m){
+        return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9">'+
+          '<div style="width:32px;height:32px;border-radius:8px;background:#E3F2FD;display:flex;align-items:center;justify-content:center;font-size:14px">💰</div>'+
+          '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m.desc+'</div>'+
+          '<div style="font-size:11px;color:#64748b">'+m.data+'</div></div>'+
+          '<div style="font-size:13px;font-weight:700;color:#059669">+'+fmtR2(m.valor)+'</div></div>';
+      }).join(''):'<div style="text-align:center;color:#94a3b8;font-size:13px;padding:16px">Nenhum pagamento registrado</div>')+
+      (pix.chave?'<button onclick="copiarPix()" style="width:100%;padding:11px;background:#1565C0;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-top:12px">💳 Copiar chave Pix para pagar</button>':''),'#059669');
 
   } else if(aba==='chamados'){
     var chams=(DB.get('chamados')||[]).filter(function(c){return c.apto===mor.apto||c.moradorId===mor.id;});
