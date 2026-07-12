@@ -843,7 +843,7 @@ function getAuditoria(){
   return DB._getRaw('auditoria') || [];
 }
 
-const DB = {
+var DB = {
   get(key) {
     try { return JSON.parse(localStorage.getItem('cg3_'+key)); } catch { return null; }
   },
@@ -1363,7 +1363,7 @@ function toast(msg,type='ok'){
   setTimeout(()=>t.remove(),3000);
 }
 
-const PAGES={
+var PAGES={
 
 // ===== PAINEL =====
 painel(){
@@ -5346,7 +5346,7 @@ function loteToggleAll(){var checks=document.querySelectorAll('#lote-mors input[
 
 </script>
 <script>
-const TITLES={
+var TITLES={
   painel:'Painel geral',financeiro:'Financeiro',inadimplentes:'Inadimplentes',
   moradores:'Moradores',comunicados:'Comunicados',ouvidoria:'Ouvidoria / Protocolos',
   assembleias:'Assembleias',reservas:'Reservas de áreas comuns',
@@ -6152,13 +6152,22 @@ function doLogin(){
     var content = document.getElementById('content');
     if(content && (!content.innerHTML || content.innerHTML.trim().length < 50)){
       try {
-        PAGES['painel']();
+        var result = (typeof PAGES !== 'undefined' && PAGES['painel']) ? PAGES['painel']() : null;
+        if(result) {
+          content.innerHTML = result;
+        } else {
+          content.innerHTML = '<div style="padding:30px;background:#FEF2F2;border-radius:12px;margin:20px">' +
+            '<div style="font-size:16px;font-weight:700;color:#DC2626;margin-bottom:8px">❌ PAGES não carregado</div>' +
+            '<div style="font-size:13px;color:#7F1D1D">O objeto PAGES não foi inicializado. Tente recarregar a página.</div>' +
+            '<button onclick="location.reload()" style="margin-top:12px;padding:10px 20px;background:#2196F3;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px">🔄 Recarregar</button>' +
+            '</div>';
+        }
       } catch(e) {
         content.innerHTML = '<div style="padding:30px;background:#FEF2F2;border-radius:12px;margin:20px">' +
           '<div style="font-size:16px;font-weight:700;color:#DC2626;margin-bottom:8px">❌ Erro no painel</div>' +
           '<div style="font-size:13px;font-family:monospace;color:#7F1D1D;background:#fff;padding:12px;border-radius:8px">' + 
-          (e ? e.stack || e.message : 'Erro desconhecido') + '</div>' +
-          '<button onclick="sincronizarDoServidor().then(function(){location.reload()})" style="margin-top:12px;padding:10px 20px;background:#2196F3;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px">🔄 Sincronizar e recarregar</button>' +
+          (e ? e.message : 'Erro desconhecido') + '</div>' +
+          '<button onclick="location.reload()" style="margin-top:12px;padding:10px 20px;background:#2196F3;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px">🔄 Recarregar</button>' +
           '</div>';
       }
     }
