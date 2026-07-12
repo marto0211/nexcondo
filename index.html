@@ -4691,7 +4691,7 @@ function imprimirRelatorio(categoria){
     '<div class="print-meta">Emitido em '+dataImpressao+' às '+horaImpressao+'<br>NexCondo</div></div>'+
     clone.innerHTML+
     '<div class="print-footer">Documento gerado automaticamente pelo sistema NexCondo</div>'+
-    '<script>window.onload=function(){window.print();}<\/script>'+
+    '<scr'+'ipt>window.onload=function(){window.print();}<\/script>'+
     '</body></html>'
   );
   win.document.close();
@@ -5171,7 +5171,7 @@ function gerarArquivoFormularioCelular(){
     '<style>'+CSS+'</style>\n'+
     '</head>\n<body>\n'+
     bodyFinal+'\n'+
-    '<script>'+js+'<\/script>\n'+
+    '<scr'+'ipt>'+js+'<\/scr'+'ipt>\n'+
     '</body>\n</html>';
 
   var blob=new Blob([html],{type:'text/html;charset=utf-8'});
