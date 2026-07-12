@@ -6147,6 +6147,22 @@ function doLogin(){
         setTimeout(function(){iniciarOnboarding();},300);
       } else {
         setTimeout(function(){navigate('painel');},100);
+  // Diagnóstico: se após 2s o painel ainda estiver vazio, mostrar erro
+  setTimeout(function(){
+    var content = document.getElementById('content');
+    if(content && (!content.innerHTML || content.innerHTML.trim().length < 50)){
+      try {
+        PAGES['painel']();
+      } catch(e) {
+        content.innerHTML = '<div style="padding:30px;background:#FEF2F2;border-radius:12px;margin:20px">' +
+          '<div style="font-size:16px;font-weight:700;color:#DC2626;margin-bottom:8px">❌ Erro no painel</div>' +
+          '<div style="font-size:13px;font-family:monospace;color:#7F1D1D;background:#fff;padding:12px;border-radius:8px">' + 
+          (e ? e.stack || e.message : 'Erro desconhecido') + '</div>' +
+          '<button onclick="sincronizarDoServidor().then(function(){location.reload()})" style="margin-top:12px;padding:10px 20px;background:#2196F3;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px">🔄 Sincronizar e recarregar</button>' +
+          '</div>';
+      }
+    }
+  }, 2000);
       }
     } else {
       var tentativas=_registrarTentativa(user,false);
