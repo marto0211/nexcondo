@@ -600,8 +600,9 @@ tr:hover td { background: var(--bg); }
   </style>
 </div>
 <div id="app" class="app hidden">
+<!-- Overlay para fechar sidebar no mobile -->
+<div id="overlay" onclick="closeSidebar()" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:150;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)"></div>
 <aside class="sidebar" id="sidebar">
-<div id="overlay" onclick="closeSidebar()" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:199;backdrop-filter:blur(2px)" class=""></div>
     <div class="sidebar-logo">
       <div class="sidebar-logo-icon">🏢</div>
       <div>
@@ -5614,6 +5615,8 @@ var TITLES={
 
 function navigate(page,btn){
   if(!PAGES[page])return;
+  // Fechar sidebar no mobile sempre que navegar
+  closeSidebar();
   window._currentPage=page;
   var html='';
   try{
@@ -5653,12 +5656,19 @@ function toggleSidebar(){
   var sb=document.getElementById('sidebar');
   var ov=document.getElementById('overlay');
   var isOpen=sb.classList.toggle('open');
-  if(ov) ov.style.display=isOpen?'block':'none';
+  if(ov){
+    ov.style.display=isOpen?'block':'none';
+    ov.style.zIndex='150';
+  }
+  // Prevenir scroll do body quando sidebar aberto
+  document.body.style.overflow=isOpen?'hidden':'';
 }
 function closeSidebar(){
-  document.getElementById('sidebar').classList.remove('open');
+  var sb=document.getElementById('sidebar');
   var ov=document.getElementById('overlay');
+  if(sb) sb.classList.remove('open');
   if(ov) ov.style.display='none';
+  document.body.style.overflow='';
 }
 
 // ===== FORMULÁRIO EXTERNO PARA ADMINISTRATIVO/FINANCEIRO =====
