@@ -363,13 +363,17 @@ tr:hover td { background: var(--bg); }
 /* ===== MODAL ===== */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(15,23,42,.6);
-  backdrop-filter: blur(4px); display: flex; align-items: center;
-  justify-content: center; z-index: 200; padding: 20px;
+  backdrop-filter: blur(4px); display: flex; align-items: flex-end;
+  justify-content: center; z-index: 200; padding: 0;
 }
 .modal-box {
-  background: var(--surface); border-radius: 20px; width: 100%; max-width: 540px;
-  max-height: 88vh; overflow-y: auto; box-shadow: var(--shadow-lg);
+  background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; max-width: 600px;
+  max-height: 92vh; overflow-y: auto; box-shadow: var(--shadow-lg);
   border: 1px solid var(--border);
+}
+@media(min-width:640px){
+  .modal-overlay { align-items: center; padding: 20px; }
+  .modal-box { border-radius: 20px; max-height: 88vh; }
 }
 .modal-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -680,6 +684,8 @@ tr:hover td { background: var(--bg); }
           <span>Sincronizado</span>
         </div>
         <button id="btn-sync" onclick="sincronizarDoServidor()" title="Sincronizar">🔄</button>
+        <button onclick="solicitarPermissaoNotificacao()" title="Ativar notificações" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;color:var(--text3)">🔔</button>
+        <button onclick="_backupAutomatico()" title="Fazer backup agora" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;color:var(--text3)">💾</button>
         <div class="topbar-clock" id="topbar-clock">
           <div class="clock-time" id="clock-time">00:00:00</div>
           <div class="clock-date" id="clock-date">--/--/----</div>
@@ -949,6 +955,12 @@ function usarCPFSenha(){
   var cpf=el?el.value.replace(/\D/g,'').slice(0,6):'';
   if(cpf){document.getElementById('m-senha').value=cpf;}
   else{alert('Digite o CPF primeiro.');}
+}
+function usarAptoSenha(){
+  var el=document.getElementById('m-apto');
+  var ap=el?el.value.trim():'';
+  if(ap){document.getElementById('m-senha').value=ap;}
+  else{alert('Digite o número do apto primeiro.');}
 }
 function saveMorador(m){
   const list=getMoradores();
@@ -1973,43 +1985,97 @@ ouvidoria(){
 // ===== ASSEMBLEIAS =====
 assembleias(){
   const list=getAssembleias();
-  const cards=list.length?list.map(a=>`
-    <div class="card" style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div>
-          <div style="font-size:14px;font-weight:600;color:var(--text)">${a.titulo}</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:3px">📅 ${a.data} às ${a.hora||''} · ${a.local||''}</div>
+  const cards=list.length?list.map(a=>{
+    // Calcular resultados de votação
+    const votos=a.votos||{};
+    const totalMors=getMoradores().length||1;
+    const sim=Object.values(votos).filter(v=>v==='sim').length;
+    const nao=Object.values(votos).filter(v=>v==='nao').length;
+    const abstencao=Object.values(votos).filter(v=>v==='abstencao').length;
+    const totalVotos=sim+nao+abstencao;
+    const pctSim=totalVotos>0?Math.round((sim/totalVotos)*100):0;
+    const pctNao=totalVotos>0?Math.round((nao/totalVotos)*100):0;
+    const temVotacao=a.votacaoAtiva||totalVotos>0;
+    return `
+    <div class="card" style="margin-bottom:12px;border-top:3px solid ${a.status==='realizada'?'#10B981':a.status==='cancelada'?'#EF4444':'#6366F1'}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:700;color:var(--text)">${a.titulo}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:3px">📅 ${a.data} ${a.hora?'às '+a.hora:''} ${a.local?'· '+a.local:''}</div>
         </div>
-        <div style="display:flex;gap:6px">
-          <span class="badge ${a.status==='realizada'?'b-pago':a.status==='cancelada'?'b-atrasado':'b-accent'}">${a.status||'agendada'}</span>
-          <button class="card-action" style="color:var(--danger)" onclick="confirmDelete('Excluir?',()=>{deleteAssembleia('${a.id}');navigate('assembleias')})">🗑</button>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <span class="badge ${a.status==='realizada'?'b-pago':a.status==='cancelada'?'b-atrasado':'b-info'}">${a.status||'agendada'}</span>
+          ${a.status!=='cancelada'?`<button class="card-action" onclick="abrirVotacao('${a.id}')" title="Votação online">🗳️</button>`:''}
+          <button class="card-action" onclick="imprimirAta('${a.id}')">📄</button>
+          <button class="card-action" style="color:var(--danger)" onclick="confirmDelete('Excluir assembleia?',()=>{deleteAssembleia('${a.id}');navigate('assembleias')})">🗑</button>
         </div>
       </div>
       ${a.pauta?`<div style="margin-top:10px;font-size:13px;color:var(--text2)"><strong>Pauta:</strong> ${a.pauta}</div>`:''}
       ${a.ata?`<div style="margin-top:6px;font-size:13px;color:var(--text2)"><strong>Ata:</strong> ${a.ata}</div>`:''}
-    </div>`).join(''):`<p style="color:var(--text3);font-size:13px">Nenhuma assembleia cadastrada.</p>`;
+      ${temVotacao?`
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:700;color:#6366F1;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">
+          🗳️ Votação — ${totalVotos}/${totalMors} votos (${Math.round((totalVotos/totalMors)*100)}% de participação)
+          ${a.votacaoAtiva?'<span style="background:#ECFDF5;color:#059669;padding:2px 8px;border-radius:10px;font-size:9px;margin-left:6px">ABERTA</span>':'<span style="background:#F1F5F9;color:#64748b;padding:2px 8px;border-radius:10px;font-size:9px;margin-left:6px">ENCERRADA</span>'}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+          <div style="background:#ECFDF5;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:18px;font-weight:800;color:#10B981">${sim}</div>
+            <div style="font-size:10px;color:#065F46;font-weight:600">✅ Sim (${pctSim}%)</div>
+          </div>
+          <div style="background:#FEF2F2;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:18px;font-weight:800;color:#EF4444">${nao}</div>
+            <div style="font-size:10px;color:#991B1B;font-weight:600">❌ Não (${pctNao}%)</div>
+          </div>
+          <div style="background:#F8FAFC;border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:18px;font-weight:800;color:#64748b">${abstencao}</div>
+            <div style="font-size:10px;color:#475569;font-weight:600">⬜ Abstivo</div>
+          </div>
+        </div>
+        <div style="background:#F1F5F9;border-radius:8px;height:10px;overflow:hidden">
+          <div style="display:flex;height:100%">
+            <div style="width:${pctSim}%;background:#10B981;transition:.5s"></div>
+            <div style="width:${pctNao}%;background:#EF4444;transition:.5s"></div>
+            <div style="width:${100-pctSim-pctNao}%;background:#CBD5E1;transition:.5s"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+          ${a.votacaoAtiva?`<button class="btn-secondary" onclick="encerrarVotacao('${a.id}')" style="font-size:11px;padding:5px 10px;color:#EF4444;border-color:#FECACA">🔒 Encerrar votação</button>`:''}
+          <button class="btn-secondary" onclick="verVotos('${a.id}')" style="font-size:11px;padding:5px 10px">👁 Ver votos</button>
+        </div>
+      </div>`:''}
+    </div>`;
+  }).join(''):`<div style="padding:24px;text-align:center;color:var(--text4)">Nenhuma assembleia cadastrada.</div>`;
+
   return`
     <div class="card">
-      <div class="card-header"><div class="card-title">🗳️ Nova assembleia</div><button class="btn-secondary" onclick="imprimirRelatorio('assembleias')">🖨️ Imprimir lista</button></div>
+      <div class="card-header"><div class="card-title">🗳️ Nova assembleia</div>
+      <div style="display:flex;gap:6px"><button class="btn-secondary" onclick="imprimirRelatorio('assembleias')">🖨️</button></div></div>
       <div class="form-full"><label class="form-label">Título da convocação</label><input id="ass-titulo" class="form-input" placeholder="Ex: Assembleia Ordinária — Julho 2026"></div>
       <div class="form-row">
         <div><label class="form-label">Data</label><input id="ass-data" type="date" class="form-input"></div>
-        <div><label class="form-label">Horário</label><input id="ass-hora" class="form-input" placeholder="Ex: 19h00"></div>
+        <div><label class="form-label">Horário</label><input id="ass-hora" class="form-input" placeholder="19h00"></div>
       </div>
       <div class="form-row">
-        <div><label class="form-label">Local</label><input id="ass-local" class="form-input" placeholder="Ex: Salão de festas"></div>
+        <div><label class="form-label">Local</label><input id="ass-local" class="form-input" placeholder="Salão de festas"></div>
         <div><label class="form-label">Status</label>
-          <select id="ass-status" class="form-select"><option value="agendada">Agendada</option><option value="realizada">Realizada</option><option value="cancelada">Cancelada</option></select>
+          <select id="ass-status" class="form-select">
+            <option value="agendada">Agendada</option>
+            <option value="realizada">Realizada</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
         </div>
       </div>
       <div class="form-full"><label class="form-label">Pauta</label><textarea id="ass-pauta" class="form-textarea" placeholder="Liste os itens da pauta..."></textarea></div>
-      <div class="form-full"><label class="form-label">Ata (preencher após realização)</label><textarea id="ass-ata" class="form-textarea" placeholder="Resumo das decisões tomadas..."></textarea></div>
-      <button class="btn-send" onclick="novaAssembleia()">Salvar assembleia</button>
+      <div class="form-full"><label class="form-label">Ata (preencher após a assembleia)</label><textarea id="ass-ata" class="form-textarea" placeholder="Resumo das decisões tomadas..."></textarea></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-send" onclick="novaAssembleia()">💾 Salvar</button>
+        <button class="btn-secondary" onclick="novaAssembleiaComVotacao()">🗳️ Salvar e abrir votação</button>
+      </div>
     </div>
     <div>${cards}</div>`;
 },
 
-// ===== RESERVAS =====
 reservas(){
   const list=getReservas();
   const hoje=new Date().toISOString().slice(0,10);
@@ -3760,20 +3826,20 @@ function verMorador(id){
 
     // ── SENHA DA ÁREA DO CONDÔMINO ──
     '<div style="background:#EFF6FF;border:1.5px solid #BFDBFE;border-radius:10px;padding:14px 16px;margin-bottom:12px">'+
-    '<div style="font-size:12px;font-weight:700;color:#1D4ED8;margin-bottom:10px">🔑 Acesso à Área do Condômino</div>'+
-    '<div class="form-row" style="margin-bottom:8px">'+
-    '<div><label class="form-label" style="color:#1D4ED8">'+( isNovo?'Senha de acesso':'Senha atual: '+(senhaAtual?'<span style="font-family:monospace;background:#DBEAFE;padding:1px 6px;border-radius:4px">'+senhaAtual+'</span>':'<span style="color:#DC2626">Sem senha</span>'))+'</label>'+
-    '<div style="position:relative">'+
-    '<input id="m-senha" class="form-input" type="text" value="'+senhaAtual+'" placeholder="Mínimo 4 caracteres (deixe vazio para não definir)" style="padding-right:120px">'+
-    '</div></div>'+
-    '<div style="display:flex;flex-direction:column;gap:5px;justify-content:flex-end">'+
-    '<label class="form-label">Sugestões rápidas</label>'+
-    '<div style="display:flex;gap:5px;flex-wrap:wrap">'+
-    '<button type="button" onclick="document.getElementById(\'m-senha\').value=\'123456\'" style="padding:4px 8px;background:#DBEAFE;border:1px solid #93C5FD;border-radius:6px;font-size:11px;font-weight:600;color:#1D4ED8;cursor:pointer">123456</button>'+
-    '<button type="button" onclick="usarCPFSenha()" style="padding:4px 8px;background:#DBEAFE;border:1px solid #93C5FD;border-radius:6px;font-size:11px;font-weight:600;color:#1D4ED8;cursor:pointer">CPF (6 dig.)</button>'+
-    '<button type="button" onclick="var ap=(document.getElementById(\'m-apto\')||{value:\'\'}).value;if(ap)document.getElementById(\'m-senha\').value=ap;else alert(\'Digite o nº do apto primeiro.\')" style="padding:4px 8px;background:#DBEAFE;border:1px solid #93C5FD;border-radius:6px;font-size:11px;font-weight:600;color:#1D4ED8;cursor:pointer">Nº do apto</button>'+
-    '</div></div></div>'+
-    '<div style="font-size:11px;color:#3B82F6;margin-top:4px">'+(isNovo?'O morador usará esta senha para acessar a Área do Condômino. Ele poderá trocar depois pelo app.':'Altere a senha se necessário. O morador verá a senha antiga como inválida imediatamente após salvar.')+'</div></div>'+
+    '<div style="font-size:12px;font-weight:700;color:#1D4ED8;margin-bottom:6px">🔑 Acesso à Área do Condômino</div>'+
+    (isNovo?'':('<div style="font-size:11px;color:#64748b;margin-bottom:10px">Senha atual: '+(senhaAtual?'<code style="background:#DBEAFE;color:#1D4ED8;padding:1px 8px;border-radius:4px">'+senhaAtual+'</code>':'<span style="color:#DC2626">Sem senha</span>')+'</div>'))+
+    '<div class="form-full" style="margin-bottom:8px">'+
+    '<label class="form-label" style="color:#1D4ED8">'+(isNovo?'Senha de acesso':'Nova senha (deixe vazio para manter)')+'</label>'+
+    '<input id="m-senha" class="form-input" type="text" value="'+senhaAtual+'" placeholder="Ex: 123456">'+
+    '</div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+
+    '<span style="font-size:10px;color:#64748b;font-weight:600;line-height:26px">Sugestão:</span>'+
+    '<button type="button" onclick="document.getElementById(\'m-senha\').value=\'123456\'" style="padding:4px 10px;background:#DBEAFE;border:1px solid #93C5FD;border-radius:6px;font-size:11px;font-weight:600;color:#1D4ED8;cursor:pointer">123456</button>'+
+    '<button type="button" onclick="usarCPFSenha()" style="padding:4px 10px;background:#DBEAFE;border:1px solid #93C5FD;border-radius:6px;font-size:11px;font-weight:600;color:#1D4ED8;cursor:pointer">CPF (6 dígitos)</button>'+
+    '<button type="button" onclick="usarAptoSenha()" style="padding:4px 10px;background:#DBEAFE;border:1px solid #93C5FD;border-radius:6px;font-size:11px;font-weight:600;color:#1D4ED8;cursor:pointer">Nº do apto</button>'+
+    '</div>'+
+    '<div style="font-size:11px;color:#3B82F6">'+(isNovo?'O morador usará esta senha para entrar na Área do Condômino.':'Altere se necessário. A senha antiga ficará inválida imediatamente.')+'</div>'+
+    '</div>'+
     '<div class="form-full"><label class="form-label">Observações</label>'+
     '<textarea id="m-obs" class="form-textarea">'+(m.obs||'')+'</textarea></div>';
 }
@@ -4050,6 +4116,126 @@ function editarOuvidoria(id){const o=getOuvidoria().find(x=>x.id===id);if(!o)ret
   <div class="form-full"><label class="form-label">Status</label><select id="eo-status" class="form-select"><option value="aberto" ${o.status==='aberto'?'selected':''}>Aberto</option><option value="em análise" ${o.status==='em análise'?'selected':''}>Em análise</option><option value="resolvido" ${o.status==='resolvido'?'selected':''}>Resolvido</option></select></div>`,()=>{saveOuvidoria({...o,assunto:document.getElementById('eo-ass').value,resposta:document.getElementById('eo-resp').value,status:document.getElementById('eo-status').value});closeModal();navigate('ouvidoria');});}
 
 // ASSEMBLEIA
+function novaAssembleia(){
+  const t=document.getElementById('ass-titulo').value.trim();
+  const d=document.getElementById('ass-data').value;
+  if(!t||!d)return alert('Título e data são obrigatórios.');
+  const p=d.split('-');
+  const ass={titulo:t,data:p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d,dataISO:d,
+    hora:document.getElementById('ass-hora').value.trim(),
+    local:document.getElementById('ass-local').value.trim(),
+    status:document.getElementById('ass-status').value,
+    pauta:document.getElementById('ass-pauta').value.trim(),
+    ata:document.getElementById('ass-ata').value.trim(),votos:{}};
+  saveAssembleia(ass);toast('✅ Assembleia salva!');navigate('assembleias');
+}
+function novaAssembleiaComVotacao(){
+  const t=document.getElementById('ass-titulo').value.trim();
+  const d=document.getElementById('ass-data').value;
+  if(!t||!d)return alert('Título e data são obrigatórios.');
+  const p=d.split('-');
+  const ass={titulo:t,data:p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d,dataISO:d,
+    hora:document.getElementById('ass-hora').value.trim(),
+    local:document.getElementById('ass-local').value.trim(),
+    status:document.getElementById('ass-status').value,
+    pauta:document.getElementById('ass-pauta').value.trim(),
+    ata:document.getElementById('ass-ata').value.trim(),
+    votos:{},votacaoAtiva:true};
+  saveAssembleia(ass);
+  toast('✅ Assembleia salva com votação aberta!');
+  navigate('assembleias');
+}
+function abrirVotacao(id){
+  var ass=getAssembleias().find(function(a){return a.id===id;});
+  if(!ass)return;
+  ass.votacaoAtiva=true;
+  saveAssembleia(ass);
+  navigate('assembleias');
+  toast('🗳️ Votação aberta!');
+}
+function encerrarVotacao(id){
+  var ass=getAssembleias().find(function(a){return a.id===id;});
+  if(!ass)return;
+  ass.votacaoAtiva=false;
+  ass.status='realizada';
+  saveAssembleia(ass);
+  navigate('assembleias');
+  toast('🔒 Votação encerrada!');
+}
+function registrarVotoAssembleia(assId,moradorId,voto){
+  var assembleias=getAssembleias();
+  var idx=assembleias.findIndex(function(a){return a.id===assId;});
+  if(idx<0)return;
+  if(!assembleias[idx].votacaoAtiva){toast('Esta votação está encerrada.');return;}
+  if(!assembleias[idx].votos) assembleias[idx].votos={};
+  assembleias[idx].votos[moradorId]=voto;
+  DB.set('assembleias',assembleias);
+  toast('✅ Voto registrado!');
+}
+function verVotos(id){
+  var ass=getAssembleias().find(function(a){return a.id===id;});
+  if(!ass)return;
+  var mors=getMoradores();
+  var votos=ass.votos||{};
+  var linhas=mors.map(function(m){
+    var v=votos[m.id];
+    var label=v==='sim'?'✅ Sim':v==='nao'?'❌ Não':v==='abstencao'?'⬜ Abstenção':'— Não votou';
+    var cor=v==='sim'?'#10B981':v==='nao'?'#EF4444':v?'#64748b':'#CBD5E1';
+    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px">'+
+      '<span>'+m.nome+' <span style="color:#94a3b8;font-size:11px">Apto '+m.apto+'</span></span>'+
+      '<span style="font-weight:600;color:'+cor+'">'+label+'</span></div>';
+  }).join('');
+  modal('🗳️ Votos — '+ass.titulo,
+    '<div style="max-height:400px;overflow-y:auto">'+linhas+'</div>',
+    function(){closeModal();});
+  setTimeout(function(){var b=document.getElementById('modal-save');if(b)b.textContent='Fechar';},50);
+}
+function imprimirAta(id){
+  var ass=getAssembleias().find(function(a){return a.id===id;});
+  if(!ass)return;
+  var cfg=getConfig();
+  var votos=ass.votos||{};
+  var sim=Object.values(votos).filter(function(v){return v==='sim';}).length;
+  var nao=Object.values(votos).filter(function(v){return v==='nao';}).length;
+  var abs=Object.values(votos).filter(function(v){return v==='abstencao';}).length;
+  var total=sim+nao+abs;
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ata — '+ass.titulo+'</title>'+
+    '<style>body{font-family:Arial,sans-serif;padding:40px;max-width:700px;margin:0 auto}'+
+    'h1{font-size:20px;margin-bottom:4px}'+
+    '.info{color:#64748b;font-size:13px;margin-bottom:24px}'+
+    '.section{margin-bottom:20px}'+
+    '.section-title{font-size:13px;font-weight:700;text-transform:uppercase;color:#6366F1;margin-bottom:8px;border-bottom:2px solid #EEF2FF;padding-bottom:4px}'+
+    '@media print{@page{margin:15mm}button{display:none}}</style></head><body>'+
+    '<div style="text-align:center;margin-bottom:24px">'+
+    '<div style="font-size:18px;font-weight:700">'+cfg.nome+'</div>'+
+    '<div style="color:#64748b;font-size:12px">CNPJ: '+(cfg.cnpj||'—')+'</div></div>'+
+    '<h1>'+ass.titulo+'</h1>'+
+    '<div class="info">'+ass.data+(ass.hora?' às '+ass.hora:'')+(ass.local?' · '+ass.local:'')+'</div>'+
+    (ass.pauta?'<div class="section"><div class="section-title">Pauta</div><div style="font-size:14px;line-height:1.7">'+ass.pauta+'</div></div>':'')+
+    (total>0?'<div class="section"><div class="section-title">Resultado da votação</div>'+
+    '<div style="display:flex;gap:20px;font-size:14px">'+
+    '<span>✅ Sim: <strong>'+sim+'</strong></span>'+
+    '<span>❌ Não: <strong>'+nao+'</strong></span>'+
+    '<span>⬜ Abstenção: <strong>'+abs+'</strong></span>'+
+    '<span>Total: <strong>'+total+'</strong></span></div></div>':'')+
+    (ass.ata?'<div class="section"><div class="section-title">Ata</div><div style="font-size:14px;line-height:1.8">'+ass.ata+'</div></div>':'')+
+    '<div style="margin-top:40px;border-top:1px solid #e2e8f0;padding-top:20px">'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:40px">'+
+    '<div style="text-align:center;padding-top:40px;border-top:1px solid #1e293b">Síndico(a)</div>'+
+    '<div style="text-align:center;padding-top:40px;border-top:1px solid #1e293b">Subsíndico(a)</div></div></div>'+
+    '<div style="text-align:center;margin-top:12px;font-size:11px;color:#94a3b8">Gerado em '+new Date().toLocaleString('pt-BR')+' · NexCondo</div>'+
+    '<div style="text-align:center;margin-top:12px"><button onclick="window.print()" style="background:#6366F1;color:#fff;border:none;border-radius:8px;padding:10px 24px;cursor:pointer">🖨️ Imprimir</button></div>'+
+    '</body></html>';
+  var w=window.open('','_blank');
+  if(w){w.document.write(html);w.document.close();}
+}
+function saveAssembleia(a){
+  var list=getAssembleias();
+  if(a.id){var i=list.findIndex(function(x){return x.id===a.id;});if(i>=0)list[i]=a;else list.push(a);}
+  else{a.id=uid();list.unshift(a);}
+  DB.set('assembleias',list);
+}
+
 function novaAssembleia(){const t=document.getElementById('ass-titulo').value.trim(),d=document.getElementById('ass-data').value;if(!t)return alert('Digite o título.');saveAssembleia({titulo:t,data:isoToDisplay(d),dataISO:d,hora:document.getElementById('ass-hora').value,local:document.getElementById('ass-local').value,status:document.getElementById('ass-status').value,pauta:document.getElementById('ass-pauta').value,ata:document.getElementById('ass-ata').value});toast('Assembleia salva!');navigate('assembleias');}
 
 // CHAMADO
@@ -5914,42 +6100,65 @@ function _carregarHistoricoLogin(){
 // ===== SISTEMA DE USUÁRIOS E PERMISSÕES =====
 function getUsuarios(){
   var u=DB.get('usuarios')||[];
-  // Garantir Marta Monte cadastrada (só se não existir)
-  var marta=u.find(function(x){return x.email==='martamonte205@gmail.com';});
-  if(!marta){
-    u.push({id:'usr_marta_monte_001',nome:'Marta Monte',email:'martamonte205@gmail.com',senha:'Ma121212',perfil:'admin',ativo:true,permissoes:{painel:true,financeiro:true,moradores:true,despesasFixas:true,relatorios:true,dre:true,orcamento:true,fundoReserva:true,comunicados:true,assembleias:true,reservas:true,manutencao:true,preventivas:true,encomendas:true,visitantes:true,fornecedores:true,estoque:true,documentos:true,funcionarios:true,chamados:true,chaves:true,patrimonio:true,compras:true,ferias:true,ocorrencias:true,contratos:true,pix:true,whatsapp:true,portalMorador:true,configuracoes:true,usuarios:true,lancar:true,excluir:true,editar:true,exportar:true}});
-    DB.set('usuarios',u);
+  // Filtrar usuários excluídos (marcados com deletado:true)
+  var ativos=u.filter(function(x){return !x.deletado;});
+
+  // Garantir Marta Monte (só se não existir E não foi deletada)
+  var martaFoiDeletada=u.find(function(x){return x.email==='martamonte205@gmail.com'&&x.deletado;});
+  if(!martaFoiDeletada){
+    var marta=ativos.find(function(x){return x.email==='martamonte205@gmail.com';});
+    if(!marta){
+      ativos.push({id:'usr_marta_monte_001',nome:'Marta Monte',email:'martamonte205@gmail.com',senha:'Ma121212',perfil:'admin',ativo:true,permissoes:{painel:true,financeiro:true,moradores:true,despesasFixas:true,relatorios:true,dre:true,orcamento:true,fundoReserva:true,comunicados:true,assembleias:true,reservas:true,manutencao:true,preventivas:true,encomendas:true,visitantes:true,fornecedores:true,estoque:true,documentos:true,funcionarios:true,chamados:true,chaves:true,patrimonio:true,compras:true,ferias:true,ocorrencias:true,contratos:true,pix:true,whatsapp:true,portalMorador:true,configuracoes:true,usuarios:true,lancar:true,excluir:true,editar:true,exportar:true}});
+      DB.set('usuarios',ativos);
+    }
   }
-  if(!u.find(function(x){return x.perfil==='admin';})){
+
+  // Garantir sempre um admin ativo (só cria novo se não houver NENHUM admin ativo)
+  var temAdmin=ativos.find(function(x){return x.perfil==='admin'&&!x.deletado;});
+  if(!temAdmin){
     var login=DB.get('login')||{user:'sindico@condo.com',pass:'123456'};
-    u.unshift({
+    ativos.unshift({
       id:'admin-master',nome:'Marto Santos',email:login.user,
       senha:login.pass,perfil:'admin',ativo:true,
-      permissoes:{
-        painel:true,financeiro:true,moradores:true,despesasFixas:true,
-        relatorios:true,dre:true,orcamento:true,fundoReserva:true,
-        comunicados:true,assembleias:true,reservas:true,manutencao:true,
-        preventivas:true,encomendas:true,visitantes:true,fornecedores:true,
-        estoque:true,documentos:true,funcionarios:true,chamados:true,
-        chaves:true,patrimonio:true,compras:true,ferias:true,
-        ocorrencias:true,contratos:true,pix:true,whatsapp:true,
-        portalMorador:true,configuracoes:true,usuarios:true,
-        lancar:true,excluir:true,editar:true,exportar:true
-      }
+      permissoes:{painel:true,financeiro:true,moradores:true,despesasFixas:true,relatorios:true,dre:true,orcamento:true,fundoReserva:true,comunicados:true,assembleias:true,reservas:true,manutencao:true,preventivas:true,encomendas:true,visitantes:true,fornecedores:true,estoque:true,documentos:true,funcionarios:true,chamados:true,chaves:true,patrimonio:true,compras:true,ferias:true,ocorrencias:true,contratos:true,pix:true,whatsapp:true,portalMorador:true,configuracoes:true,usuarios:true,lancar:true,excluir:true,editar:true,exportar:true}
     });
-    DB.set('usuarios',u);
+    DB.set('usuarios',ativos);
   }
-  return u;
+  return ativos;
 }
 function saveUsuario(u){
-  var lista=getUsuarios();
-  if(u.id){lista=lista.map(function(x){return x.id===u.id?u:x;});}
-  else{u.id='usr_'+Date.now();lista.push(u);}
+  // Salvar no array completo (incluindo deletados para manter histórico)
+  var lista=DB.get('usuarios')||[];
+  if(u.id){
+    var idx=lista.findIndex(function(x){return x.id===u.id;});
+    if(idx>=0) lista[idx]=u; else lista.push(u);
+  } else {
+    u.id='usr_'+Date.now();
+    lista.push(u);
+  }
   DB.set('usuarios',lista);
 }
 function deleteUsuario(id){
-  var lista=getUsuarios().filter(function(u){return u.id!==id;});
-  DB.set('usuarios',lista);
+  // Não pode excluir o último admin
+  var ativos=getUsuarios();
+  var usr=ativos.find(function(u){return u.id===id;});
+  if(usr&&usr.perfil==='admin'){
+    var admins=ativos.filter(function(u){return u.perfil==='admin';});
+    if(admins.length<=1){
+      alert('❌ Não é possível excluir o único administrador do sistema.\n\nCadastre outro administrador antes de excluir este.');
+      return;
+    }
+  }
+  // Marcar como deletado (soft delete) — não recria na próxima chamada
+  var lista=DB.get('usuarios')||[];
+  var idx=lista.findIndex(function(u){return u.id===id;});
+  if(idx>=0){
+    lista[idx].deletado=true;
+    lista[idx].ativo=false;
+    DB.set('usuarios',lista);
+    navigate('usuarios');
+    toast('✅ Usuário removido!');
+  }
 }
 
 // Perfis pré-definidos
@@ -6326,6 +6535,27 @@ function abrirWAAviso(mensagem){
   if(!tel){alert('Configure o telefone do síndico em Configurações.');return;}
   var url=enviarNotificacaoWA('aviso',{telefone:tel,mensagem:mensagem,sindico:cfg.sindico});
   if(url)window.open(url,'_blank');
+}
+
+function gerarMsgWA(mor, cfg){
+  var pix=DB.get('pix')||{};
+  var fmtR=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});};
+  var msg='Olá, *'+mor.nome+'*! 👋\n\n';
+  msg+='📍 *'+cfg.nome+'*\n';
+  msg+='━━━━━━━━━━━━━━━━\n\n';
+  msg+='Identificamos pendência financeira na sua unidade:\n\n';
+  msg+='🏠 *Unidade:* '+mor.apto+'\n';
+  msg+='💰 *Débito:* *'+fmtR(mor.debito)+'*\n\n';
+  if(pix.chave){
+    msg+='💳 *Pagamento via Pix:*\n';
+    msg+='Chave: `'+pix.chave+'`\n';
+    if(pix.nome) msg+='Favorecido: '+pix.nome+'\n';
+    msg+='\n';
+  }
+  msg+='Após o pagamento, envie o comprovante para regularização.\n\n';
+  msg+='Dúvidas? Entre em contato com a administração.\n\n';
+  msg+='_'+cfg.nome+' — NexCondo_';
+  return msg;
 }
 
 function enviarWAInadimplentes(){
@@ -6817,35 +7047,39 @@ function definirSenhaMorador(id, nome){
 }
 
 function definirSenhaTodos(){
-  var h = '<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:10px 14px;font-size:13px;color:#1D4ED8;margin-bottom:14px">'+
-    'Define uma senha padrão para <strong>todos os moradores que ainda não têm senha</strong>. '+
-    'Cada morador poderá trocar depois pelo app deles.</div>'+
-    '<div class="form-full"><label class="form-label">Senha padrão</label>'+
-    '<div style="position:relative">'+
-    '<input id="senha-todos" type="text" class="form-input" value="123456" style="padding-right:44px">'+
-    '</div></div>'+
-    '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">'+
-    '<button onclick="document.getElementById(\'senha-todos\').value=\'123456\'" style="padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">123456</button>'+
-    '<button onclick="document.getElementById(\'senha-todos\').value=\'nexcondo\'" style="padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">nexcondo</button>'+
-    '<button onclick="document.getElementById(\'senha-todos\').value=\'morador\'" style="padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">morador</button>'+
+  var semSenha=getMoradores().filter(function(m){return !m.senha;});
+  var h='<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:12px 14px;font-size:13px;color:#1D4ED8;margin-bottom:14px">'+
+    '📋 <strong>'+semSenha.length+'</strong> morador(es) sem senha receberão a senha padrão.<br>'+
+    '<span style="font-size:11px;opacity:.8">Moradores que já têm senha <strong>não serão afetados</strong>.</span></div>'+
+    '<div class="form-full" style="margin-bottom:12px">'+
+    '<label class="form-label">Senha padrão</label>'+
+    '<input id="senha-todos" type="text" class="form-input" value="123456" placeholder="Mínimo 4 caracteres">'+
     '</div>'+
-    '<div style="background:#FFFBEB;border:1px solid #FCD34D;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400E;margin-top:12px">'+
-    '⚠️ Apenas moradores SEM senha receberão a senha padrão. Senhas já existentes não serão alteradas.</div>';
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">'+
+    '<span style="font-size:10px;color:#64748b;font-weight:600;line-height:26px">Sugestão:</span>'+
+    '<button type="button" onclick="document.getElementById(\'senha-todos\').value=\'123456\'" style="padding:5px 12px;background:#DBEAFE;border:1px solid #93C5FD;border-radius:8px;font-size:12px;font-weight:600;color:#1D4ED8;cursor:pointer">123456</button>'+
+    '<button type="button" onclick="document.getElementById(\'senha-todos\').value=\'nexcondo\'" style="padding:5px 12px;background:#DBEAFE;border:1px solid #93C5FD;border-radius:8px;font-size:12px;font-weight:600;color:#1D4ED8;cursor:pointer">nexcondo</button>'+
+    '<button type="button" onclick="document.getElementById(\'senha-todos\').value=\'morador\'" style="padding:5px 12px;background:#DBEAFE;border:1px solid #93C5FD;border-radius:8px;font-size:12px;font-weight:600;color:#1D4ED8;cursor:pointer">morador</button>'+
+    '</div>'+
+    (semSenha.length===0?'<div style="background:#ECFDF5;border:1px solid #6EE7B7;border-radius:8px;padding:10px 12px;font-size:12px;color:#065F46">✅ Todos os moradores já têm senha definida!</div>':'');
 
   modal('🔑 Definir senha padrão para todos', h, function(){
-    var senha = document.getElementById('senha-todos').value.trim();
-    if(!senha || senha.length < 4){alert('A senha deve ter pelo menos 4 caracteres.');return;}
-    var mors = getMoradores();
-    var count = 0;
-    mors.forEach(function(m){
-      if(!m.senha){m.senha = senha; count++;}
-    });
-    DB.set('moradores', mors);
+    var semSenha2=getMoradores().filter(function(m){return !m.senha;});
+    if(semSenha2.length===0){closeModal();toast('Todos já têm senha!');return;}
+    var senha=document.getElementById('senha-todos').value.trim();
+    if(!senha||senha.length<4){alert('A senha deve ter pelo menos 4 caracteres.');return;}
+    var mors=getMoradores();
+    var count=0;
+    mors.forEach(function(m){if(!m.senha){m.senha=senha;count++;}});
+    DB.set('moradores',mors);
     closeModal();
     navigate('moradores');
     toast('✅ Senha definida para '+count+' morador(es)!');
   });
-  setTimeout(function(){var b=document.getElementById('modal-save');if(b)b.textContent='Definir senha para todos';},50);
+  setTimeout(function(){
+    var b=document.getElementById('modal-save');
+    if(b) b.textContent='Definir senha para todos';
+  },50);
 }
 
 function voltarLoginPrincipal(){
@@ -7274,6 +7508,161 @@ function morReservar(area){
     DB.set('reservas',res);
     closeModal();morNavegar('reservas',null);toast('Reserva confirmada!');
   });
+}
+
+// ── BACKUP AUTOMÁTICO ──
+function _backupAutomatico(){
+  try {
+    var ultimo=localStorage.getItem('nexcondo_ultimo_backup');
+    var agora=Date.now();
+    var umaSemana=7*24*60*60*1000;
+    if(ultimo && (agora-Number(ultimo))<umaSemana) return;
+    var dados={};
+    var chaves=['moradores','movimentacoes','despesasFixas','comunicados','reservas','manutencao','usuarios','config','pix','chamados','encomendas','documentos','assembleias','auditoria'];
+    chaves.forEach(function(c){
+      var v=localStorage.getItem('cg3_'+c);
+      if(v) try{dados[c]=JSON.parse(v);}catch(e){}
+    });
+    dados._backup_data=new Date().toISOString();
+    dados._version='NexCondo-AutoBackup';
+    var json=JSON.stringify(dados,null,2);
+    var blob=new Blob([json],{type:'application/json'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url;
+    a.download='NexCondo_Backup_Auto_'+new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')+'.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    localStorage.setItem('nexcondo_ultimo_backup',String(agora));
+    toast('💾 Backup automático salvo!');
+  }catch(e){console.warn('Backup auto falhou:',e);}
+}
+// Verificar backup ao carregar (com delay para não travar o login)
+setTimeout(_backupAutomatico, 5000);
+
+// ══════════════════════════════════════════
+// BACKUP AUTOMÁTICO SEMANAL
+// ══════════════════════════════════════════
+function _backupAutomatico(){
+  try{
+    var ultimo=localStorage.getItem('nexcondo_ultimo_backup');
+    var agora=Date.now();
+    if(ultimo&&(agora-Number(ultimo))<7*24*60*60*1000)return; // menos de 7 dias
+    var dados={};
+    var chaves=['moradores','movimentacoes','despesasFixas','comunicados','reservas','manutencoes','usuarios','config','pix','chamados','encomendas','documentos','assembleias','auditoria'];
+    chaves.forEach(function(c){var v=localStorage.getItem('cg3_'+c);if(v)try{dados[c]=JSON.parse(v);}catch(e){}});
+    dados._backup_data=new Date().toISOString();
+    dados._version='NexCondo-AutoBackup-v2';
+    var json=JSON.stringify(dados,null,2);
+    var blob=new Blob([json],{type:'application/json'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url;
+    a.download='NexCondo_Backup_'+new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')+'.json';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
+    localStorage.setItem('nexcondo_ultimo_backup',String(agora));
+    toast('💾 Backup automático gerado!');
+  }catch(e){console.warn('Backup falhou:',e);}
+}
+
+// ══════════════════════════════════════════
+// COMPROVANTE PDF DO MORADOR
+// ══════════════════════════════════════════
+function gerarComprovanteMorador(moradorId){
+  var mors=getMoradores();
+  var mor=mors.find(function(m){return m.id===moradorId;});
+  if(!mor){toast('Morador não encontrado.');return;}
+  var cfg=getConfig();
+  var movs=getMovimentacoes().filter(function(m){
+    return (m.moradorId===moradorId||(m.apto&&m.apto===mor.apto))&&m.tipo==='receita';
+  });
+  var fmtR=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});};
+  var pago=movs.filter(function(m){return m.status==='pago';}).reduce(function(s,m){return s+Number(m.valor||0);},0);
+  var pend=movs.filter(function(m){return m.status==='pendente';}).reduce(function(s,m){return s+Number(m.valor||0);},0);
+  var linhas=movs.slice(0,20).map(function(m){
+    var isP=m.status==='pago';
+    return '<tr style="border-bottom:1px solid #f1f5f9">'+
+      '<td style="padding:8px 10px;font-size:12px">'+m.data+'</td>'+
+      '<td style="padding:8px 10px;font-size:12px">'+m.desc+'</td>'+
+      '<td style="padding:8px 10px;font-size:12px;font-weight:600;color:'+(isP?'#16a34a':'#d97706')+'">'+fmtR(m.valor)+'</td>'+
+      '<td style="padding:8px 10px"><span style="font-size:10px;padding:2px 8px;border-radius:10px;background:'+(isP?'#dcfce7':'#fef9c3')+';color:'+(isP?'#15803d':'#854d0e')+';font-weight:600">'+(isP?'Pago':'Pendente')+'</span></td>'+
+      '</tr>';
+  }).join('');
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Extrato — '+mor.nome+'</title>'+
+    '<style>body{font-family:Arial,sans-serif;margin:0;padding:24px;color:#1e293b}'+
+    '.header{background:#4F46E5;color:#fff;padding:20px 24px;border-radius:12px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}'+
+    '.card{background:#f8fafc;border-radius:10px;padding:16px;margin-bottom:16px;border:1px solid #e2e8f0}'+
+    'table{width:100%;border-collapse:collapse}th{text-align:left;padding:8px 10px;font-size:11px;color:#64748b;text-transform:uppercase;border-bottom:2px solid #e2e8f0}'+
+    '@media print{@page{margin:10mm}button{display:none}}</style></head><body>'+
+    '<div class="header">'+
+    '<div><div style="font-size:20px;font-weight:700">'+cfg.nome+'</div>'+
+    '<div style="font-size:12px;opacity:.7">Extrato do Condômino — '+new Date().toLocaleDateString('pt-BR')+'</div></div>'+
+    '<div style="text-align:right;font-size:12px;opacity:.7">NexCondo</div></div>'+
+    '<div class="card"><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">'+
+    '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:4px">Morador</div><div style="font-size:14px;font-weight:700">'+mor.nome+'</div></div>'+
+    '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:4px">Unidade</div><div style="font-size:14px;font-weight:700">Apto '+mor.apto+'</div></div>'+
+    '<div><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:4px">Situação</div>'+
+    '<div style="font-size:14px;font-weight:700;color:'+(mor.status==='adimplente'?'#16a34a':'#dc2626')+'">'+
+    (mor.status==='adimplente'?'✅ Adimplente':'⚠️ Inadimplente')+'</div></div></div></div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">'+
+    '<div class="card" style="text-align:center"><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:6px">Total Pago</div><div style="font-size:22px;font-weight:800;color:#16a34a">'+fmtR(pago)+'</div></div>'+
+    '<div class="card" style="text-align:center"><div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:6px">Total Pendente</div><div style="font-size:22px;font-weight:800;color:'+(pend>0?'#dc2626':'#64748b')+'">'+fmtR(pend)+'</div></div>'+
+    '</div>'+
+    '<table><thead><tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Status</th></tr></thead>'+
+    '<tbody>'+linhas+'</tbody></table>'+
+    '<div style="margin-top:20px;padding:12px;border-top:1px solid #e2e8f0;text-align:center;font-size:11px;color:#94a3b8">'+
+    'Documento gerado em '+new Date().toLocaleString('pt-BR')+' · '+cfg.nome+' · NexCondo</div>'+
+    '<div style="text-align:center;margin-top:12px"><button onclick="window.print()" style="background:#4F46E5;color:#fff;border:none;border-radius:8px;padding:10px 24px;cursor:pointer;font-size:14px">🖨️ Imprimir / Salvar PDF</button></div>'+
+    '</body></html>';
+  var w=window.open('','_blank');
+  if(w){w.document.write(html);w.document.close();}
+}
+
+// ══════════════════════════════════════════
+// TEMPLATE WHATSAPP PERSONALIZADO
+// ══════════════════════════════════════════
+function gerarMsgWA(mor, cfg){
+  var pix=DB.get('pix')||{};
+  var fmtR=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});};
+  var linhas=['Olá, *'+mor.nome+'*! 👋','','📍 *'+cfg.nome+'*','━━━━━━━━━━━━━━━━','','Identificamos pendência financeira na sua unidade:','','🏠 *Unidade:* Apto '+mor.apto,'💰 *Débito:* *'+fmtR(mor.debito)+'*',''];
+  if(pix.chave){
+    linhas.push('💳 *Pagamento via Pix:*');
+    linhas.push('Chave: `'+pix.chave+'`');
+    if(pix.nome) linhas.push('Favorecido: '+pix.nome);
+    linhas.push('');
+  }
+  linhas.push('Após o pagamento, envie o comprovante.');
+  linhas.push('');
+  linhas.push('_'+cfg.nome+' — NexCondo_');
+  return linhas.join('\n');
+}
+
+// ══════════════════════════════════════════
+// PUSH NOTIFICATION (Service Worker)
+// ══════════════════════════════════════════
+function solicitarPermissaoNotificacao(){
+  if(!('Notification' in window)){toast('Notificações não suportadas neste browser.');return;}
+  if(Notification.permission==='granted'){
+    toast('✅ Notificações já ativadas!');return;
+  }
+  Notification.requestPermission().then(function(p){
+    if(p==='granted'){
+      toast('✅ Notificações ativadas!');
+      new Notification('NexCondo',{body:'Você receberá alertas importantes aqui.',icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🏢</text></svg>'});
+      localStorage.setItem('nexcondo_notif','true');
+    } else {
+      toast('❌ Permissão negada. Ative manualmente nas configurações do browser.');
+    }
+  });
+}
+function enviarNotificacao(titulo, corpo){
+  if(Notification.permission==='granted'&&document.hidden){
+    new Notification('NexCondo — '+titulo,{body:corpo,icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🏢</text></svg>'});
+  }
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
