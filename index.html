@@ -6761,11 +6761,24 @@ var _moradorAtual = null;
 
 function abrirAreaMorador(){
   var cfg=getConfig();
+  // Esconder tudo
+  document.getElementById('login-screen').style.display='none';
+  var appEl=document.getElementById('app');
+  if(appEl) appEl.style.display='none';
+  // Atualizar nome do condomínio
   var el=document.getElementById('mor-condo-nome');
   if(el) el.textContent=cfg.nome||'Residencial';
-  document.getElementById('login-screen').classList.add('hidden');
-  document.getElementById('morador-screen').classList.remove('hidden');
-  setTimeout(function(){var i=document.getElementById('mor-login');if(i)i.focus();},300);
+  // Mostrar tela do morador
+  var ms=document.getElementById('morador-screen');
+  ms.classList.remove('hidden');
+  ms.style.display='flex';
+  // Limpar campos
+  var login=document.getElementById('mor-login');
+  var senha=document.getElementById('mor-senha');
+  if(login) login.value='';
+  if(senha) senha.value='';
+  // Não dar focus no mobile (evita teclado abrindo automaticamente)
+  if(window.innerWidth>768&&login) setTimeout(function(){login.focus();},300);
 }
 
 function definirSenhaMorador(id, nome){
@@ -6836,8 +6849,14 @@ function definirSenhaTodos(){
 }
 
 function voltarLoginPrincipal(){
-  document.getElementById('morador-screen').classList.add('hidden');
-  document.getElementById('login-screen').classList.remove('hidden');
+  var ms=document.getElementById('morador-screen');
+  ms.classList.add('hidden');
+  ms.style.display='none';
+  var ma=document.getElementById('morador-app');
+  if(ma){ma.classList.add('hidden');ma.style.display='none';}
+  var ls=document.getElementById('login-screen');
+  ls.style.display='flex';
+  ls.classList.remove('hidden');
 }
 
 function doLoginMorador(){
@@ -6890,7 +6909,12 @@ function doLoginMorador(){
       badge.textContent='Adimplente';badge.style.background='#ECFDF5';badge.style.color='#059669';
     }
     document.getElementById('morador-screen').classList.add('hidden');
-    document.getElementById('morador-app').classList.remove('hidden');
+    document.getElementById('morador-screen').style.display='none';
+    var maEl=document.getElementById('morador-app');
+    maEl.classList.remove('hidden');
+    maEl.style.display='block';
+    // Scroll ao topo
+    window.scrollTo(0,0);
     morNavegar('inicio',null);
   }
 
@@ -6918,10 +6942,17 @@ function doLoginMorador(){
 
 function doLogoutMorador(){
   _moradorAtual=null;
-  document.getElementById('morador-app').classList.add('hidden');
-  document.getElementById('login-screen').classList.remove('hidden');
-  document.getElementById('mor-login').value='';
-  document.getElementById('mor-senha').value='';
+  var ma=document.getElementById('morador-app');
+  if(ma){ma.classList.add('hidden');ma.style.display='none';}
+  var ms=document.getElementById('morador-screen');
+  if(ms){ms.classList.add('hidden');ms.style.display='none';}
+  var ls=document.getElementById('login-screen');
+  ls.style.display='flex';
+  ls.classList.remove('hidden');
+  var login=document.getElementById('mor-login');
+  var senha=document.getElementById('mor-senha');
+  if(login) login.value='';
+  if(senha) senha.value='';
 }
 
 function morTrocarSenha(){
