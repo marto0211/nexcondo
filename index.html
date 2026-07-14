@@ -7334,28 +7334,34 @@ function _morCarregarTempo(){
       });
   };
 
-  // Tentar geolocalização do browser
+  // Usar Salvador BA como padrão — funciona sempre
+  // Tenta geolocalização mas não bloqueia
+  var _lat='-12.9714', _lon='-38.5014', _cidade='Salvador, BA';
+  
+  var _doRender=function(){_renderTempo(_lat,_lon,_cidade);};
+  
   if(navigator.geolocation){
+    var _geoTimeout=setTimeout(_doRender, 4000); // fallback se geo demorar
     navigator.geolocation.getCurrentPosition(
       function(pos){
-        var lat=pos.coords.latitude.toFixed(4);
-        var lon=pos.coords.longitude.toFixed(4);
-        // Buscar nome da cidade via nominatim
-        fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lon+'&format=json&accept-language=pt')
+        clearTimeout(_geoTimeout);
+        _lat=pos.coords.latitude.toFixed(4);
+        _lon=pos.coords.longitude.toFixed(4);
+        // Cidade via nominatim com timeout
+        var _nomTimeout=setTimeout(function(){_renderTempo(_lat,_lon,'');},3000);
+        fetch('https://nominatim.openstreetmap.org/reverse?lat='+_lat+'&lon='+_lon+'&format=json&accept-language=pt')
           .then(function(r){return r.json();})
           .then(function(geo){
-            var cidade=(geo.address&&(geo.address.city||geo.address.town||geo.address.village))||'';
-            _renderTempo(lat,lon,cidade);
-          }).catch(function(){_renderTempo(lat,lon,'');});
+            clearTimeout(_nomTimeout);
+            _cidade=(geo.address&&(geo.address.city||geo.address.town||geo.address.village))||'';
+            _renderTempo(_lat,_lon,_cidade);
+          }).catch(function(){clearTimeout(_nomTimeout);_renderTempo(_lat,_lon,'');});
       },
-      function(){
-        // Sem permissão — usar Salvador BA como padrão (localização do condomínio)
-        _renderTempo('-12.9714','-38.5014','Salvador, BA');
-      },
-      {timeout:5000}
+      function(){clearTimeout(_geoTimeout);_doRender();},
+      {timeout:3000,maximumAge:300000}
     );
   } else {
-    _renderTempo('-12.9714','-38.5014','Salvador, BA');
+    _doRender();
   }
 }
 
@@ -7699,17 +7705,14 @@ function morNavegar(aba,btn){
         (cfg.telefone?'<a href="https://wa.me/55'+cfg.telefone.replace(/\D/g,'')+'" target="_blank" style="display:block;padding:11px;background:#25D366;color:#fff;border-radius:10px;text-align:left;font-size:13px;font-weight:600;text-decoration:none">💬 Falar com o síndico no WhatsApp</a>':'')+'</div>');
 
   } else if(aba==='financeiro'){
-    content.innerHTML='<div style="padding:32px;text-align:center"><div style="font-size:28px;margin-bottom:8px">⏳</div><div style="font-size:12px;color:#94a3b8">Atualizando dados...</div></div>';
-    var SUPA_URL2='https://wovesiyhholprfbhyaxz.supabase.co';
-    var SUPA_KEY2='sb_publishable_O2W-ONXXWjDoXSg7Ui6P3g_Eg61DBZd';
-    var CONDO_ID2='residencial-ana-silva';
-    function _renderFin(){
-      var fmtR2=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});};
-      var movsMor2=(DB.get('movimentacoes')||[]).filter(function(m){
-        var porId=m.moradorId&&m.moradorId===mor.id;
-        var porNome=m.imovel&&mor.nome&&m.imovel.toLowerCase().indexOf(mor.nome.toLowerCase().split(' ')[0])>=0;
-        return (porId||porNome)&&m.tipo==='receita';
-      });
+    // Renderizar direto com dados locais — sem esperar Supabase
+    var fmtR2=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});};
+    var movsMor2=(DB.get('movimentacoes')||[]).filter(function(m){
+      var porId=m.moradorId&&m.moradorId===mor.id;
+      var porApto=m.apto&&mor.apto&&String(m.apto).trim()===String(mor.apto).trim();
+      var porNome=m.imovel&&mor.nome&&m.imovel.toLowerCase().indexOf(mor.nome.toLowerCase().split(' ')[0])>=0;
+      return (porId||porApto||porNome)&&m.tipo==='receita';
+    }).sort(function(a,b){return(b.dataISO||'').localeCompare(a.dataISO||'');});
       var meses6=[];
       for(var bm=5;bm>=0;bm--){
         var bd2=new Date(); bd2.setMonth(bd2.getMonth()-bm);
@@ -7850,28 +7853,7 @@ function morNavegar(aba,btn){
         (pix.chave?'<button onclick="copiarPix()" style="width:100%;padding:13px;background:linear-gradient(135deg,#10B981,#059669);color:#fff;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer">💳 Copiar chave Pix para pagar</button>':'');
       // Guardar dados para seleção interativa
       window._morMeses=meses6;
-    }
-    Promise.all([
-      fetch(SUPA_URL2+'/rest/v1/dados_condominio?condo_id=eq.'+CONDO_ID2+'&chave=eq.movimentacoes&select=valor',
-        {headers:{'apikey':SUPA_KEY2,'Authorization':'Bearer '+SUPA_KEY2}}).then(function(r){return r.json();}).catch(function(){return [];}),
-      fetch(SUPA_URL2+'/rest/v1/dados_condominio?condo_id=eq.'+CONDO_ID2+'&chave=eq.moradores&select=valor',
-        {headers:{'apikey':SUPA_KEY2,'Authorization':'Bearer '+SUPA_KEY2}}).then(function(r){return r.json();}).catch(function(){return [];})
-    ]).then(function(results){
-      if(results[0]&&results[0].length&&results[0][0].valor)
-        localStorage.setItem('cg3_movimentacoes',JSON.stringify(results[0][0].valor));
-      if(results[1]&&results[1].length&&results[1][0].valor){
-        localStorage.setItem('cg3_moradores',JSON.stringify(results[1][0].valor));
-        var morAtual2=results[1][0].valor.find(function(m){return m.id===mor.id;});
-        if(morAtual2){
-          _moradorAtual=morAtual2;
-          var badge2=document.getElementById('mor-status-badge');
-          var debEl2=document.getElementById('mor-debito-display');
-          if(badge2){if(morAtual2.status==='inadimplente'){badge2.textContent='Inadimplente';badge2.style.background='#FEF2F2';badge2.style.color='#DC2626';}else{badge2.textContent='Adimplente';badge2.style.background='#ECFDF5';badge2.style.color='#059669';}}
-          if(debEl2)debEl2.textContent='R$ '+Number(morAtual2.debito||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
-        }
-      }
-      _renderFin();
-    }).catch(function(){_renderFin();})
+
   } else if(aba==='chamados'){
     var chams=(DB.get('chamados')||[]).filter(function(c){return c.apto===mor.apto||c.moradorId===mor.id;});
     content.innerHTML=card('Meus chamados',
@@ -7996,7 +7978,6 @@ function morNavegar(aba,btn){
     setTimeout(_morCarregarTempo, 100);
   }
 }
-
 
 function morSelecionarMes(idx){
   var meses=window._morMeses;
@@ -8132,7 +8113,17 @@ function gerarComprovanteMorador(moradorId){
   if(!mor){toast('Morador não encontrado.');return;}
   var cfg=getConfig();
   var movs=getMovimentacoes().filter(function(m){
-    return (m.moradorId===moradorId||(m.apto&&m.apto===mor.apto))&&m.tipo==='receita';
+    if(m.tipo!=='receita') return false;
+    // Por ID do morador
+    if(m.moradorId&&m.moradorId===moradorId) return true;
+    // Por número do apto
+    if(m.apto&&mor.apto&&String(m.apto).trim()===String(mor.apto).trim()) return true;
+    // Por nome no campo imovel
+    if(m.imovel&&mor.nome){
+      var primeiroNome=mor.nome.split(' ')[0].toLowerCase();
+      if(m.imovel.toLowerCase().indexOf(primeiroNome)>=0) return true;
+    }
+    return false;
   });
   var fmtR=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});};
   // Ordenar por data mais recente
