@@ -7091,6 +7091,217 @@ function voltarLoginPrincipal(){
   document.body.style.overflow='';
 }
 
+function copiarPix(){
+  var pix=DB.get('pix')||{};
+  if(!pix.chave){toast('Chave Pix não configurada.');return;}
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(pix.chave).then(function(){
+      toast('✅ Chave Pix copiada!');
+    }).catch(function(){
+      prompt('Copie a chave Pix:',pix.chave);
+    });
+  } else {
+    prompt('Copie a chave Pix:',pix.chave);
+  }
+}
+
+function gerarReciboPixPortal(){
+  var mor=_moradorAtual;
+  if(!mor){toast('Faça login primeiro.');return;}
+  var pix=DB.get('pix')||{};
+  var cfg=getConfig();
+  if(!pix.chave){
+    toast('❌ Chave Pix não configurada pelo síndico.');return;
+  }
+  // Buscar último pagamento do morador
+  var movs=getMovimentacoes().filter(function(m){
+    return (m.moradorId===mor.id||(m.apto&&m.apto===mor.apto))&&m.tipo==='receita'&&m.status==='pago';
+  }).sort(function(a,b){return(b.dataISO||'').localeCompare(a.dataISO||'');});
+  var ultimoPgto=movs[0];
+  var fmtR=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});};
+  var agora=new Date();
+  var dataGer=agora.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  var horaGer=agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
+  var html='<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">'+
+    '<title>Recibo Pix — '+mor.nome+'</title>'+
+    '<style>'+
+    '*{box-sizing:border-box;margin:0;padding:0}'+
+    'body{font-family:"Segoe UI",Arial,sans-serif;background:#F0F4F8;display:flex;align-items:flex-start;justify-content:center;padding:30px 16px;min-height:100vh}'+
+    '.recibo{background:#fff;border-radius:20px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.12)}'+
+    '.header{background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:28px 24px;text-align:center;color:#fff}'+
+    '.logo{font-size:32px;margin-bottom:8px}'+
+    '.condo-nome{font-size:16px;font-weight:700;margin-bottom:2px}'+
+    '.condo-sub{font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.08em}'+
+    '.status-box{background:#ECFDF5;border-bottom:3px dashed #D1FAE5;padding:24px;text-align:center}'+
+    '.status-icon{font-size:48px;margin-bottom:8px}'+
+    '.status-txt{font-size:13px;color:#059669;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}'+
+    '.valor{font-size:36px;font-weight:900;color:#0F172A;letter-spacing:-.02em}'+
+    '.body{padding:20px 24px}'+
+    '.row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #F1F5F9}'+
+    '.row:last-child{border-bottom:none}'+
+    '.label{font-size:11px;color:#94A3B8;font-weight:600;text-transform:uppercase;letter-spacing:.06em}'+
+    '.value{font-size:13px;color:#1E293B;font-weight:600;text-align:right;max-width:60%}'+
+    '.pix-box{background:#F8FAFC;border:1.5px dashed #CBD5E1;border-radius:12px;padding:14px 16px;margin:16px 0;text-align:center}'+
+    '.pix-label{font-size:10px;color:#64748B;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}'+
+    '.pix-chave{font-size:14px;font-weight:800;color:#4F46E5;word-break:break-all}'+
+    '.footer{background:#F8FAFC;padding:16px 24px;text-align:center;border-top:1px solid #E2E8F0}'+
+    '.footer-txt{font-size:11px;color:#94A3B8;line-height:1.6}'+
+    '.btn-print{background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff;border:none;border-radius:12px;padding:13px 24px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-top:16px}'+
+    '@media print{.btn-print{display:none}body{background:#fff;padding:0}.recibo{box-shadow:none;border-radius:0;max-width:100%}}'+
+    '</style></head><body>'+
+    '<div class="recibo">'+
+      '<div class="header">'+
+        '<div class="logo">🏢</div>'+
+        '<div class="condo-nome">'+cfg.nome+'</div>'+
+        '<div class="condo-sub">Comprovante de Pagamento</div>'+
+      '</div>'+
+      '<div class="status-box">'+
+        '<div class="status-icon">✅</div>'+
+        '<div class="status-txt">Pagamento Confirmado</div>'+
+        '<div class="valor">'+fmtR(ultimoPgto?Number(ultimoPgto.valor):Number(mor.taxaCustom||cfg.taxaCondominio||0))+'</div>'+
+      '</div>'+
+      '<div class="body">'+
+        '<div class="row"><span class="label">Morador</span><span class="value">'+mor.nome+'</span></div>'+
+        '<div class="row"><span class="label">Unidade</span><span class="value">Apto '+mor.apto+'</span></div>'+
+        (ultimoPgto?'<div class="row"><span class="label">Referência</span><span class="value">'+ultimoPgto.desc+'</span></div>':'')+
+        (ultimoPgto?'<div class="row"><span class="label">Data do pagamento</span><span class="value">'+ultimoPgto.data+'</span></div>':'')+
+        '<div class="row"><span class="label">Emitido em</span><span class="value">'+dataGer+' às '+horaGer+'</span></div>'+
+        '<div class="row"><span class="label">Situação</span><span class="value" style="color:'+(mor.status==='adimplente'?'#10B981':'#EF4444')+'">'+(mor.status==='adimplente'?'✅ Adimplente':'⚠️ Pendente')+'</span></div>'+
+        '<div class="pix-box">'+
+          '<div class="pix-label">Chave Pix para pagamento</div>'+
+          '<div class="pix-chave">'+pix.chave+'</div>'+
+          (pix.nome?'<div style="font-size:11px;color:#64748b;margin-top:4px">Favorecido: '+pix.nome+'</div>':'')+
+        '</div>'+
+        '<button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>'+
+      '</div>'+
+      '<div class="footer">'+
+        '<div class="footer-txt">Este documento é um recibo gerado pelo sistema NexCondo.<br>'+cfg.nome+' — '+agora.getFullYear()+'</div>'+
+      '</div>'+
+    '</div>'+
+    '</body></html>';
+
+  var w=window.open('','_blank');
+  if(w){w.document.write(html);w.document.close();}
+}
+
+function gerarComprovantePortal(){
+  var mor=_moradorAtual;
+  if(!mor){toast('Faça login primeiro.');return;}
+  gerarComprovanteMorador(mor.id);
+}
+
+function _morCarregarTempo(){
+  var tempoEl=document.getElementById('mor-tempo-widget');
+  if(!tempoEl)return;
+  tempoEl.innerHTML='<div style="text-align:center;padding:16px;color:rgba(255,255,255,.6);font-size:12px">📍 Obtendo localização...</div>';
+
+  var _renderTempo=function(lat,lon,cidade){
+    tempoEl.innerHTML='<div style="text-align:center;padding:12px;color:rgba(255,255,255,.6);font-size:12px">⏳ Carregando previsão...</div>';
+    // Open-Meteo — gratuito, sem CORS, sem API key
+    var url='https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon+
+      '&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m'+
+      '&daily=weather_code,temperature_2m_max,temperature_2m_min'+
+      '&timezone=America%2FSao_Paulo&forecast_days=4&language=pt';
+    fetch(url)
+      .then(function(r){return r.json();})
+      .then(function(data){
+        var cur=data.current;
+        var daily=data.daily;
+        if(!cur)throw new Error('sem dados');
+        // WMO weather code to emoji
+        var wmoIcon=function(code){
+          if(code===0)return'☀️';
+          if(code<=2)return'🌤️';
+          if(code<=3)return'☁️';
+          if(code<=48)return'🌫️';
+          if(code<=57)return'🌧️';
+          if(code<=67)return'🌧️';
+          if(code<=77)return'❄️';
+          if(code<=82)return'🌧️';
+          if(code<=86)return'❄️';
+          if(code<=99)return'⛈️';
+          return'🌡️';
+        };
+        var wmoDesc=function(code){
+          if(code===0)return'Céu limpo';
+          if(code<=2)return'Parcialmente nublado';
+          if(code<=3)return'Nublado';
+          if(code<=48)return'Neblina';
+          if(code<=57)return'Chuvisco';
+          if(code<=67)return'Chuva';
+          if(code<=77)return'Neve';
+          if(code<=82)return'Chuva forte';
+          if(code<=86)return'Neve forte';
+          if(code<=99)return'Tempestade';
+          return'Variado';
+        };
+        var temp=Math.round(cur.temperature_2m);
+        var hum=cur.relative_humidity_2m;
+        var wind=Math.round(cur.wind_speed_10m);
+        var icon=wmoIcon(cur.weather_code);
+        var desc=wmoDesc(cur.weather_code);
+        var dias=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+        var previsoes='';
+        if(daily&&daily.time){
+          previsoes=daily.time.slice(1,4).map(function(dt,i){
+            var d=new Date(dt+'T12:00:00');
+            return '<div style="text-align:center;flex:1;padding:6px 4px">'+
+              '<div style="font-size:9px;color:rgba(255,255,255,.65);margin-bottom:4px">'+dias[d.getDay()]+'</div>'+
+              '<div style="font-size:20px;margin-bottom:4px">'+wmoIcon(daily.weather_code[i+1])+'</div>'+
+              '<div style="font-size:11px;color:#fff;font-weight:700">'+Math.round(daily.temperature_2m_max[i+1])+'°</div>'+
+              '<div style="font-size:10px;color:rgba(255,255,255,.5)">'+Math.round(daily.temperature_2m_min[i+1])+'°</div>'+
+              '</div>';
+          }).join('');
+        }
+        tempoEl.innerHTML=
+          '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">'+
+            '<div style="font-size:52px;line-height:1">'+icon+'</div>'+
+            '<div>'+
+              '<div style="font-size:32px;font-weight:900;color:#fff;line-height:1">'+temp+'°C</div>'+
+              '<div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:3px">'+desc+'</div>'+
+              (cidade?'<div style="font-size:10px;color:rgba(255,255,255,.55);margin-top:2px">📍 '+cidade+'</div>':'')+
+              '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:2px">'+
+                '💧 '+hum+'% · 💨 '+wind+'km/h'+
+              '</div>'+
+            '</div>'+
+          '</div>'+
+          '<div style="display:flex;background:rgba(255,255,255,.12);border-radius:14px;padding:10px;gap:4px">'+
+            previsoes+
+          '</div>';
+      }).catch(function(e){
+        tempoEl.innerHTML=
+          '<div style="display:flex;align-items:center;gap:10px;padding:8px">'+
+          '<div style="font-size:32px">🌡️</div>'+
+          '<div style="font-size:12px;color:rgba(255,255,255,.6)">Previsão indisponível.<br>Verifique sua conexão.</div></div>';
+      });
+  };
+
+  // Tentar geolocalização do browser
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      function(pos){
+        var lat=pos.coords.latitude.toFixed(4);
+        var lon=pos.coords.longitude.toFixed(4);
+        // Buscar nome da cidade via nominatim
+        fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lon+'&format=json&accept-language=pt')
+          .then(function(r){return r.json();})
+          .then(function(geo){
+            var cidade=(geo.address&&(geo.address.city||geo.address.town||geo.address.village))||'';
+            _renderTempo(lat,lon,cidade);
+          }).catch(function(){_renderTempo(lat,lon,'');});
+      },
+      function(){
+        // Sem permissão — usar Salvador BA como padrão (localização do condomínio)
+        _renderTempo('-12.9714','-38.5014','Salvador, BA');
+      },
+      {timeout:5000}
+    );
+  } else {
+    _renderTempo('-12.9714','-38.5014','Salvador, BA');
+  }
+}
+
 function definirSenhaMorador(id, nome){
   var mor = getMoradores().find(function(m){return m.id===id;});
   var senhaAtual = mor ? mor.senha : '';
@@ -7505,26 +7716,69 @@ function morNavegar(aba,btn){
             '<div style="font-size:18px;font-weight:800;color:#B45309" id="mormes-pend">'+fmtR2(meses6[5].pend)+'</div></div>'+
         '</div></div>';
 
+      // ── RECIBO DO MÊS VIGENTE ──
+      var agora2=new Date();
+      var mesMov=movsMor2.filter(function(m){
+        var d=new Date(m.dataISO||m.data);
+        return !isNaN(d)&&d.getMonth()===agora2.getMonth()&&d.getFullYear()===agora2.getFullYear();
+      });
+      var pago2=mesMov.filter(function(m){return m.status==='pago';});
+      var pend2=mesMov.filter(function(m){return m.status==='pendente';});
+      var mesNome=agora2.toLocaleString('pt-BR',{month:'long',year:'numeric'});
+      var reciboMes='<div style="background:#fff;border-radius:16px;border:1px solid #E2E8F0;padding:16px;margin-bottom:12px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+          '<div style="font-size:13px;font-weight:700;color:#1e293b">🧾 Recibo — '+mesNome.charAt(0).toUpperCase()+mesNome.slice(1)+'</div>'+
+          '<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:'+(pend2.length===0&&pago2.length>0?'#ECFDF5':'#FEF3C7')+';color:'+(pend2.length===0&&pago2.length>0?'#059669':'#D97706')+'">'+
+            (pend2.length===0&&pago2.length>0?'✅ PAGO':'⏳ PENDENTE')+'</span>'+
+        '</div>'+
+        // Lançamentos do mês
+        (mesMov.length?mesMov.map(function(m){
+          var isP=m.status==='pago';
+          return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F8FAFC">'+
+            '<div style="width:34px;height:34px;border-radius:10px;background:'+(isP?'#ECFDF5':'#FEF9C3')+';display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">'+(isP?'✅':'⏳')+'</div>'+
+            '<div style="flex:1;min-width:0">'+
+              '<div style="font-size:12px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m.desc+'</div>'+
+              '<div style="font-size:10px;color:#94a3b8">'+m.data+'</div>'+
+            '</div>'+
+            '<div style="font-size:13px;font-weight:800;color:'+(isP?'#059669':'#D97706')+'">'+fmtR2(m.valor)+'</div>'+
+          '</div>';
+        }).join(''):
+        '<div style="text-align:center;padding:16px;color:#94a3b8;font-size:12px">Nenhum lançamento neste mês</div>')+
+        // Totais
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">'+
+          '<div style="background:#ECFDF5;border-radius:10px;padding:10px;text-align:center">'+
+            '<div style="font-size:9px;color:#16A34A;font-weight:700;text-transform:uppercase;margin-bottom:3px">Pago</div>'+
+            '<div style="font-size:16px;font-weight:900;color:#15803D">'+fmtR2(pago2.reduce(function(s,m){return s+Number(m.valor||0);},0))+'</div></div>'+
+          '<div style="background:#FEF9C3;border-radius:10px;padding:10px;text-align:center">'+
+            '<div style="font-size:9px;color:#D97706;font-weight:700;text-transform:uppercase;margin-bottom:3px">Pendente</div>'+
+            '<div style="font-size:16px;font-weight:900;color:#B45309">'+fmtR2(pend2.reduce(function(s,m){return s+Number(m.valor||0);},0))+'</div></div>'+
+        '</div>'+
+        // Botão imprimir
+        '<button onclick="gerarReciboPixPortal()" style="width:100%;margin-top:12px;padding:12px;background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">'+
+          '🖨️ Imprimir recibo deste mês'+
+        '</button>'+
+        (pix2.chave&&pend2.length>0?
+          '<button onclick="copiarPix()" style="width:100%;margin-top:8px;padding:12px;background:#10B981;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">'+
+          '💳 Copiar chave Pix para pagar</button>':'')+
+      '</div>';
+
       content.innerHTML=
         '<div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);border-radius:20px;padding:20px 16px 0;margin-bottom:12px;color:#fff;position:relative;overflow:hidden">'+
-          // Título e valor
           '<div style="position:relative;z-index:1">'+
             '<div style="font-size:10px;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Total pago</div>'+
             '<div style="font-size:30px;font-weight:900;letter-spacing:-.02em;line-height:1;margin-bottom:4px">'+fmtR2(totalPago)+'</div>'+
             (totalPend>0?'<div style="font-size:12px;color:#FCD34D;font-weight:600;margin-bottom:12px">⏳ '+fmtR2(totalPend)+' pendente</div>':
             '<div style="font-size:12px;color:#4ADE80;font-weight:600;margin-bottom:12px">✅ Sem pendências</div>')+
           '</div>'+
-          // Linha SVG — separada, atrás dos cards
           '<div style="position:relative;height:64px;margin:0 -16px">'+miniLine2+'</div>'+
-          // Cards deslizáveis
           '<div style="display:flex;gap:6px;padding:8px 0 16px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;position:relative;z-index:1" id="mormes-container">'+
-            // Padding inicial para alinhamento
             '<div style="flex-shrink:0;width:4px"></div>'+
             cardsHTML2+
             '<div style="flex-shrink:0;width:4px"></div>'+
           '</div>'+
         '</div>'+
         detalheHTML+
+        reciboMes+
         card('📋 Extrato',movsMor2.length?movsMor2.slice(0,10).map(function(m){
           var isP=m.status==='pago';
           return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f8fafc">'+
@@ -7595,6 +7849,92 @@ function morNavegar(aba,btn){
           '<div style="font-size:11px;color:#64748b">'+r.data+(r.horario?' - '+r.horario:'')+'</div></div>'+
           '<span style="font-size:10px;background:#ECFDF5;color:#059669;padding:3px 8px;border-radius:10px;font-weight:600">Confirmada</span></div>';
       }).join(''):'<div style="font-size:12px;color:#94a3b8;padding:8px 0">Nenhuma reserva</div>'),'#2196F3');
+
+  } else if(aba==='utilidades'){
+    var fmtR3=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});};
+    var pix2=DB.get('pix')||{};
+    var cfg2=getConfig();
+    var taxaVal=Number(mor.taxaCustom||cfg2.taxaCondominio||cfg2.taxa||0);
+
+    content.innerHTML=
+      // ── PREVISÃO DO TEMPO ──
+      '<div style="background:linear-gradient(135deg,#0369A1,#0284C7);border-radius:20px;padding:18px;margin-bottom:12px;color:#fff">'+
+        '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">🌤 Previsão do tempo</div>'+
+        '<div id="mor-tempo-widget"><div style="text-align:center;padding:16px;color:rgba(255,255,255,.6);font-size:12px">⏳ Carregando...</div></div>'+
+      '</div>'+
+
+      // ── RECIBO PIX ──
+      '<div style="background:#fff;border-radius:16px;border:1px solid #E2E8F0;padding:16px;margin-bottom:12px">'+
+        '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:12px">🧾 Recibo de Pagamento</div>'+
+        '<div style="background:#F8FAFC;border-radius:12px;padding:14px;margin-bottom:12px;border:1.5px dashed #CBD5E1">'+
+          '<div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:6px">Chave Pix do condomínio</div>'+
+          '<div style="font-size:14px;font-weight:800;color:#4F46E5;word-break:break-all;margin-bottom:8px">'+(pix2.chave||'Não configurado')+'</div>'+
+          (pix2.nome?'<div style="font-size:11px;color:#64748b">Favorecido: '+pix2.nome+'</div>':'')+
+        '</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+          '<button onclick="copiarPix()" style="padding:12px;background:#EEF2FF;border:1.5px solid #C7D2FE;border-radius:12px;font-size:12px;font-weight:700;color:#4F46E5;cursor:pointer">📋 Copiar chave Pix</button>'+
+          '<button onclick="gerarReciboPixPortal()" style="padding:12px;background:linear-gradient(135deg,#4F46E5,#7C3AED);border:none;border-radius:12px;font-size:12px;font-weight:700;color:#fff;cursor:pointer">🖨️ Gerar recibo PDF</button>'+
+        '</div>'+
+        (taxaVal>0?'<div style="margin-top:10px;padding:10px 12px;background:#ECFDF5;border-radius:10px;font-size:12px;color:#065F46;font-weight:600">💰 Sua taxa mensal: <strong>'+fmtR3(taxaVal)+'</strong></div>':'')+
+      '</div>'+
+
+      // ── INFORMAÇÕES ÚTEIS ──
+      '<div style="background:#fff;border-radius:16px;border:1px solid #E2E8F0;padding:16px;margin-bottom:12px">'+
+        '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:12px">📋 Informações úteis</div>'+
+        '<div style="display:flex;flex-direction:column;gap:8px">'+
+
+        // SAMU
+        '<a href="tel:192" style="display:flex;align-items:center;gap:12px;padding:12px;background:#FEF2F2;border-radius:12px;text-decoration:none">'+
+          '<div style="width:36px;height:36px;background:#DC2626;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🚑</div>'+
+          '<div><div style="font-size:13px;font-weight:700;color:#991B1B">SAMU</div><div style="font-size:11px;color:#EF4444;font-weight:600">192 — Emergências médicas</div></div>'+
+          '<div style="margin-left:auto;font-size:18px">📞</div>'+
+        '</a>'+
+
+        // Bombeiros
+        '<a href="tel:193" style="display:flex;align-items:center;gap:12px;padding:12px;background:#FFF7ED;border-radius:12px;text-decoration:none">'+
+          '<div style="width:36px;height:36px;background:#EA580C;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🚒</div>'+
+          '<div><div style="font-size:13px;font-weight:700;color:#9A3412">Bombeiros</div><div style="font-size:11px;color:#F97316;font-weight:600">193 — Incêndio e resgate</div></div>'+
+          '<div style="margin-left:auto;font-size:18px">📞</div>'+
+        '</a>'+
+
+        // Polícia
+        '<a href="tel:190" style="display:flex;align-items:center;gap:12px;padding:12px;background:#EFF6FF;border-radius:12px;text-decoration:none">'+
+          '<div style="width:36px;height:36px;background:#1D4ED8;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">👮</div>'+
+          '<div><div style="font-size:13px;font-weight:700;color:#1E3A8A">Polícia Militar</div><div style="font-size:11px;color:#3B82F6;font-weight:600">190 — Segurança pública</div></div>'+
+          '<div style="margin-left:auto;font-size:18px">📞</div>'+
+        '</a>'+
+
+        // Defesa Civil
+        '<a href="tel:199" style="display:flex;align-items:center;gap:12px;padding:12px;background:#F0FDF4;border-radius:12px;text-decoration:none">'+
+          '<div style="width:36px;height:36px;background:#16A34A;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🏛️</div>'+
+          '<div><div style="font-size:13px;font-weight:700;color:#14532D">Defesa Civil</div><div style="font-size:11px;color:#22C55E;font-weight:600">199 — Riscos e desastres</div></div>'+
+          '<div style="margin-left:auto;font-size:18px">📞</div>'+
+        '</a>'+
+
+        (cfg2.telefone?
+        '<a href="https://wa.me/55'+cfg2.telefone.replace(/\D/g,'')+'" target="_blank" style="display:flex;align-items:center;gap:12px;padding:12px;background:#F0FDF4;border-radius:12px;text-decoration:none">'+
+          '<div style="width:36px;height:36px;background:#25D366;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">💬</div>'+
+          '<div><div style="font-size:13px;font-weight:700;color:#14532D">Síndico</div><div style="font-size:11px;color:#16A34A;font-weight:600">'+cfg2.telefone+' — WhatsApp</div></div>'+
+          '<div style="margin-left:auto;font-size:18px">💬</div>'+
+        '</a>':'')+'</div>'+
+      '</div>'+
+
+      // ── DOCUMENTOS DO CONDOMÍNIO ──
+      (function(){
+        var docs=DB.get('documentos')||[];
+        if(!docs.length) return '';
+        return '<div style="background:#fff;border-radius:16px;border:1px solid #E2E8F0;padding:16px;margin-bottom:12px">'+
+          '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:12px">📁 Documentos do condomínio</div>'+
+          docs.slice(0,5).map(function(d){
+            return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f8fafc">'+
+              '<div style="font-size:20px">📄</div>'+
+              '<div style="flex:1;font-size:13px;font-weight:500;color:#1e293b">'+d.nome+'</div>'+
+            '</div>';
+          }).join('')+'</div>';
+      })();
+
+    // Carregar previsão do tempo após render
+    setTimeout(_morCarregarTempo, 100);
   }
 }
 
@@ -7971,7 +8311,7 @@ document.getElementById('topbar-sub').textContent=new Date().toLocaleDateString(
     <button class="mor-nav-btn" onclick="morNavegar('financeiro',this)" data-tab="financeiro" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:6px;font-size:9px;font-weight:600;color:#94a3b8"><span style="font-size:20px">💰</span>Financeiro</button>
     <button class="mor-nav-btn" onclick="morNavegar('chamados',this)" data-tab="chamados" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:6px;font-size:9px;font-weight:600;color:#94a3b8"><span style="font-size:20px">🎫</span>Chamados</button>
     <button class="mor-nav-btn" onclick="morNavegar('comunicados',this)" data-tab="comunicados" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:6px;font-size:9px;font-weight:600;color:#94a3b8"><span style="font-size:20px">📢</span>Avisos</button>
-    <button class="mor-nav-btn" onclick="morNavegar('reservas',this)" data-tab="reservas" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:6px;font-size:9px;font-weight:600;color:#94a3b8"><span style="font-size:20px">📅</span>Reservas</button>
+    <button class="mor-nav-btn" onclick="morNavegar('utilidades',this)" data-tab="utilidades" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:6px;font-size:9px;font-weight:600;color:#94a3b8"><span style="font-size:20px">🔧</span>Mais</button>
   </nav>
 </div>
 
