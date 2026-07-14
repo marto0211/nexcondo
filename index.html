@@ -7110,77 +7110,123 @@ function gerarReciboPixPortal(){
   if(!mor){toast('Faça login primeiro.');return;}
   var pix=DB.get('pix')||{};
   var cfg=getConfig();
-  if(!pix.chave){
-    toast('❌ Chave Pix não configurada pelo síndico.');return;
-  }
-  // Buscar último pagamento do morador
-  var movs=getMovimentacoes().filter(function(m){
-    return (m.moradorId===mor.id||(m.apto&&m.apto===mor.apto))&&m.tipo==='receita'&&m.status==='pago';
+  // Buscar lançamentos do mês vigente
+  var agora3=new Date();
+  var mes3=agora3.getMonth(), ano3=agora3.getFullYear();
+  var todosMovs=getMovimentacoes().filter(function(m){
+    return (m.moradorId===mor.id||(m.apto&&m.apto===mor.apto))&&m.tipo==='receita';
   }).sort(function(a,b){return(b.dataISO||'').localeCompare(a.dataISO||'');});
-  var ultimoPgto=movs[0];
+  // Primeiro tenta mês atual, se vazio pega o último mês com lançamentos
+  var movsDoMes=todosMovs.filter(function(m){
+    var d=new Date(m.dataISO||m.data);
+    return !isNaN(d)&&d.getMonth()===mes3&&d.getFullYear()===ano3;
+  });
+  if(!movsDoMes.length) movsDoMes=todosMovs.slice(0,5);
+  var ultimoPgto=todosMovs.find(function(m){return m.status==='pago';});
   var fmtR=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});};
   var agora=new Date();
   var dataGer=agora.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   var horaGer=agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 
+  // Calcular totais do mês
+  var totalPagoMes=movsDoMes.filter(function(m){return m.status==='pago';}).reduce(function(s,m){return s+Number(m.valor||0);},0);
+  var totalPendMes=movsDoMes.filter(function(m){return m.status==='pendente';}).reduce(function(s,m){return s+Number(m.valor||0);},0);
+  var mesLabel=agora3.toLocaleString('pt-BR',{month:'long',year:'numeric'});
+  mesLabel=mesLabel.charAt(0).toUpperCase()+mesLabel.slice(1);
+
+  var linhasMovs=movsDoMes.map(function(m){
+    var isP=m.status==='pago';
+    return '<tr>'+
+      '<td style="padding:10px 12px;font-size:13px;border-bottom:1px solid #F1F5F9">'+m.data+'</td>'+
+      '<td style="padding:10px 12px;font-size:13px;border-bottom:1px solid #F1F5F9">'+m.desc+'</td>'+
+      '<td style="padding:10px 12px;font-size:13px;font-weight:700;color:'+(isP?'#16A34A':'#D97706')+';border-bottom:1px solid #F1F5F9">'+fmtR(m.valor)+'</td>'+
+      '<td style="padding:10px 12px;border-bottom:1px solid #F1F5F9"><span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:'+(isP?'#DCFCE7':'#FEF9C3')+';color:'+(isP?'#15803D':'#854D0E')+'">'+(isP?'✅ Pago':'⏳ Pendente')+'</span></td>'+
+      '</tr>';
+  }).join('');
+
   var html='<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">'+
-    '<title>Recibo Pix — '+mor.nome+'</title>'+
+    '<meta name="viewport" content="width=device-width,initial-scale=1">'+
+    '<title>Recibo — '+mesLabel+' — '+mor.nome+'</title>'+
     '<style>'+
     '*{box-sizing:border-box;margin:0;padding:0}'+
-    'body{font-family:"Segoe UI",Arial,sans-serif;background:#F0F4F8;display:flex;align-items:flex-start;justify-content:center;padding:30px 16px;min-height:100vh}'+
-    '.recibo{background:#fff;border-radius:20px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.12)}'+
-    '.header{background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:28px 24px;text-align:center;color:#fff}'+
-    '.logo{font-size:32px;margin-bottom:8px}'+
-    '.condo-nome{font-size:16px;font-weight:700;margin-bottom:2px}'+
-    '.condo-sub{font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.08em}'+
-    '.status-box{background:#ECFDF5;border-bottom:3px dashed #D1FAE5;padding:24px;text-align:center}'+
-    '.status-icon{font-size:48px;margin-bottom:8px}'+
-    '.status-txt{font-size:13px;color:#059669;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}'+
-    '.valor{font-size:36px;font-weight:900;color:#0F172A;letter-spacing:-.02em}'+
-    '.body{padding:20px 24px}'+
-    '.row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #F1F5F9}'+
-    '.row:last-child{border-bottom:none}'+
-    '.label{font-size:11px;color:#94A3B8;font-weight:600;text-transform:uppercase;letter-spacing:.06em}'+
-    '.value{font-size:13px;color:#1E293B;font-weight:600;text-align:right;max-width:60%}'+
-    '.pix-box{background:#F8FAFC;border:1.5px dashed #CBD5E1;border-radius:12px;padding:14px 16px;margin:16px 0;text-align:center}'+
+    'body{font-family:"Segoe UI",Arial,sans-serif;background:#F0F4F8;padding:24px 16px;min-height:100vh}'+
+    '.recibo{background:#fff;border-radius:20px;max-width:480px;margin:0 auto;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.12)}'+
+    '.header{background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:28px 24px;color:#fff}'+
+    '.header-top{display:flex;align-items:center;gap:14px;margin-bottom:16px}'+
+    '.logo-box{width:48px;height:48px;background:rgba(255,255,255,.2);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}'+
+    '.condo-nome{font-size:18px;font-weight:800}'+
+    '.condo-sub{font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.08em;margin-top:2px}'+
+    '.status-row{display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.12);border-radius:12px;padding:12px 16px}'+
+    '.mes-label{font-size:12px;font-weight:600;opacity:.85}'+
+    '.status-badge{font-size:11px;font-weight:800;padding:4px 12px;border-radius:20px;background:'+(totalPendMes===0&&totalPagoMes>0?'#ECFDF5':'#FEF9C3')+';color:'+(totalPendMes===0&&totalPagoMes>0?'#059669':'#D97706')+'}'+
+    '.total-box{text-align:center;padding:28px 24px 20px;border-bottom:1px dashed #E2E8F0}'+
+    '.total-label{font-size:11px;color:#94A3B8;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}'+
+    '.total-valor{font-size:40px;font-weight:900;color:#1E293B;letter-spacing:-.02em}'+
+    '.morador-box{padding:20px 24px;border-bottom:1px solid #F1F5F9;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}'+
+    '.info-item .label{font-size:10px;color:#94A3B8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}'+
+    '.info-item .value{font-size:13px;font-weight:700;color:#1E293B}'+
+    '.table-wrap{padding:0 24px 20px}'+
+    '.table-title{font-size:11px;font-weight:700;color:#6366F1;text-transform:uppercase;letter-spacing:.08em;padding:16px 0 10px}'+
+    'table{width:100%;border-collapse:collapse}'+
+    'th{font-size:10px;color:#94A3B8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:8px 12px;border-bottom:2px solid #E2E8F0;text-align:left}'+
+    '.totais{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 24px 20px}'+
+    '.tot-card{border-radius:12px;padding:14px;text-align:center}'+
+    '.tot-card .tl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}'+
+    '.tot-card .tv{font-size:20px;font-weight:900}'+
+    '.pix-box{margin:0 24px 20px;background:#F8FAFC;border:1.5px dashed #CBD5E1;border-radius:14px;padding:16px;text-align:center}'+
     '.pix-label{font-size:10px;color:#64748B;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}'+
-    '.pix-chave{font-size:14px;font-weight:800;color:#4F46E5;word-break:break-all}'+
-    '.footer{background:#F8FAFC;padding:16px 24px;text-align:center;border-top:1px solid #E2E8F0}'+
-    '.footer-txt{font-size:11px;color:#94A3B8;line-height:1.6}'+
-    '.btn-print{background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff;border:none;border-radius:12px;padding:13px 24px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-top:16px}'+
-    '@media print{.btn-print{display:none}body{background:#fff;padding:0}.recibo{box-shadow:none;border-radius:0;max-width:100%}}'+
+    '.pix-chave{font-size:15px;font-weight:800;color:#4F46E5;word-break:break-all}'+
+    '.footer{background:#F8FAFC;padding:16px 24px;text-align:center;font-size:11px;color:#94A3B8;line-height:1.6;border-top:1px solid #E2E8F0}'+
+    '.btn-area{padding:16px 24px;display:flex;gap:8px}'+
+    '.btn{border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;flex:1}'+
+    '.btn-primary{background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff}'+
+    '@media print{@page{margin:8mm;size:A4}.btn-area{display:none}body{background:#fff;padding:0}.recibo{box-shadow:none;border-radius:0;max-width:100%}}'+
     '</style></head><body>'+
     '<div class="recibo">'+
+      // HEADER
       '<div class="header">'+
-        '<div class="logo">🏢</div>'+
-        '<div class="condo-nome">'+cfg.nome+'</div>'+
-        '<div class="condo-sub">Comprovante de Pagamento</div>'+
-      '</div>'+
-      '<div class="status-box">'+
-        '<div class="status-icon">✅</div>'+
-        '<div class="status-txt">Pagamento Confirmado</div>'+
-        '<div class="valor">'+fmtR(ultimoPgto?Number(ultimoPgto.valor):Number(mor.taxaCustom||cfg.taxaCondominio||0))+'</div>'+
-      '</div>'+
-      '<div class="body">'+
-        '<div class="row"><span class="label">Morador</span><span class="value">'+mor.nome+'</span></div>'+
-        '<div class="row"><span class="label">Unidade</span><span class="value">Apto '+mor.apto+'</span></div>'+
-        (ultimoPgto?'<div class="row"><span class="label">Referência</span><span class="value">'+ultimoPgto.desc+'</span></div>':'')+
-        (ultimoPgto?'<div class="row"><span class="label">Data do pagamento</span><span class="value">'+ultimoPgto.data+'</span></div>':'')+
-        '<div class="row"><span class="label">Emitido em</span><span class="value">'+dataGer+' às '+horaGer+'</span></div>'+
-        '<div class="row"><span class="label">Situação</span><span class="value" style="color:'+(mor.status==='adimplente'?'#10B981':'#EF4444')+'">'+(mor.status==='adimplente'?'✅ Adimplente':'⚠️ Pendente')+'</span></div>'+
-        '<div class="pix-box">'+
-          '<div class="pix-label">Chave Pix para pagamento</div>'+
-          '<div class="pix-chave">'+pix.chave+'</div>'+
-          (pix.nome?'<div style="font-size:11px;color:#64748b;margin-top:4px">Favorecido: '+pix.nome+'</div>':'')+
+        '<div class="header-top">'+
+          '<div class="logo-box">🏢</div>'+
+          '<div><div class="condo-nome">'+cfg.nome+'</div><div class="condo-sub">Recibo de Condomínio</div></div>'+
         '</div>'+
-        '<button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>'+
+        '<div class="status-row">'+
+          '<div class="mes-label">📅 '+mesLabel+'</div>'+
+          '<div class="status-badge">'+(totalPendMes===0&&totalPagoMes>0?'✅ PAGO':'⏳ PENDENTE')+'</div>'+
+        '</div>'+
       '</div>'+
-      '<div class="footer">'+
-        '<div class="footer-txt">Este documento é um recibo gerado pelo sistema NexCondo.<br>'+cfg.nome+' — '+agora.getFullYear()+'</div>'+
+      // TOTAL
+      '<div class="total-box">'+
+        '<div class="total-label">Total pago neste mês</div>'+
+        '<div class="total-valor">'+fmtR(totalPagoMes)+'</div>'+
+        (totalPendMes>0?'<div style="margin-top:8px;font-size:13px;font-weight:600;color:#D97706">⏳ Pendente: '+fmtR(totalPendMes)+'</div>':'')+
       '</div>'+
+      // MORADOR INFO
+      '<div class="morador-box">'+
+        '<div class="info-item"><div class="label">Morador</div><div class="value">'+mor.nome+'</div></div>'+
+        '<div class="info-item"><div class="label">Unidade</div><div class="value">Apto '+mor.apto+'</div></div>'+
+        '<div class="info-item"><div class="label">Situação</div><div class="value" style="color:'+(mor.status==='adimplente'?'#16A34A':'#DC2626')+'">'+(mor.status==='adimplente'?'✅ Em dia':'⚠️ Pendente')+'</div></div>'+
+      '</div>'+
+      // TABELA
+      '<div class="table-wrap">'+
+        '<div class="table-title">Lançamentos do período</div>'+
+        '<table>'+
+          '<thead><tr><th>Data</th><th>Descrição</th><th>Valor</th><th>Status</th></tr></thead>'+
+          '<tbody>'+linhasMovs+'</tbody>'+
+        '</table>'+
+      '</div>'+
+      // TOTAIS
+      '<div class="totais">'+
+        '<div class="tot-card" style="background:#ECFDF5"><div class="tl" style="color:#16A34A">✅ Total Pago</div><div class="tv" style="color:#15803D">'+fmtR(totalPagoMes)+'</div></div>'+
+        '<div class="tot-card" style="background:#FEF9C3"><div class="tl" style="color:#D97706">⏳ Pendente</div><div class="tv" style="color:#B45309">'+fmtR(totalPendMes)+'</div></div>'+
+      '</div>'+
+      // PIX
+      (pix.chave?'<div class="pix-box"><div class="pix-label">Chave Pix para pagamento</div><div class="pix-chave">'+pix.chave+'</div>'+(pix.nome?'<div style="font-size:11px;color:#64748b;margin-top:4px">Favorecido: '+pix.nome+'</div>':'')+'</div>':'')+
+      // FOOTER
+      '<div class="footer">'+cfg.nome+' — NexCondo<br>Emitido em '+dataGer+' às '+horaGer+'</div>'+
+      // BOTÕES
+      '<div class="btn-area"><button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button></div>'+
     '</div>'+
     '</body></html>';
-
   var w=window.open('','_blank');
   if(w){w.document.write(html);w.document.close();}
 }
@@ -7269,6 +7315,17 @@ function _morCarregarTempo(){
           '<div style="display:flex;background:rgba(255,255,255,.12);border-radius:14px;padding:10px;gap:4px">'+
             previsoes+
           '</div>';
+        // Atualizar mini clima no header
+        var ti=document.getElementById('mor-clima-icon');
+        var tt=document.getElementById('mor-clima-temp');
+        var td=document.getElementById('mor-clima-desc');
+        var tc=document.getElementById('mor-clima-city');
+        var tp=document.getElementById('mor-clima-preview');
+        if(ti) ti.textContent=icon;
+        if(tt) tt.textContent=temp+'°';
+        if(td) td.textContent=desc;
+        if(tc&&cidade) tc.textContent='📍 '+cidade;
+        if(tp) tp.innerHTML=previsoes.replace(/flex:1/g,'').replace(/padding:6px 4px/g,'padding:4px 2px').replace(/font-size:20px/g,'font-size:14px').replace(/font-size:11px/g,'font-size:9px').replace(/font-size:9px/g,'font-size:8px').replace(/font-size:10px/g,'font-size:9px');
       }).catch(function(e){
         tempoEl.innerHTML=
           '<div style="display:flex;align-items:center;gap:10px;padding:8px">'+
@@ -7440,6 +7497,8 @@ function doLoginMorador(){
     }
     // Iniciar relógio do portal
     _iniciarRelogioPortal();
+    // Carregar clima no header
+    setTimeout(_morCarregarTempo, 1000);
     document.getElementById('morador-screen').classList.add('hidden');
     document.getElementById('morador-screen').style.cssText='display:none';
     var maEl=document.getElementById('morador-app');
@@ -8076,9 +8135,12 @@ function gerarComprovanteMorador(moradorId){
     return (m.moradorId===moradorId||(m.apto&&m.apto===mor.apto))&&m.tipo==='receita';
   });
   var fmtR=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});};
+  // Ordenar por data mais recente
+  movs.sort(function(a,b){return(b.dataISO||'').localeCompare(a.dataISO||'');});
+  movs.sort(function(a,b){return(b.dataISO||'').localeCompare(a.dataISO||'');});
   var pago=movs.filter(function(m){return m.status==='pago';}).reduce(function(s,m){return s+Number(m.valor||0);},0);
   var pend=movs.filter(function(m){return m.status==='pendente';}).reduce(function(s,m){return s+Number(m.valor||0);},0);
-  var linhas=movs.slice(0,20).map(function(m){
+  var linhas=movs.slice(0,30).map(function(m){
     var isP=m.status==='pago';
     return '<tr style="border-bottom:1px solid #f1f5f9">'+
       '<td style="padding:8px 10px;font-size:12px">'+m.data+'</td>'+
@@ -8264,6 +8326,27 @@ document.getElementById('topbar-sub').textContent=new Date().toLocaleDateString(
       </div>
     </div>
 
+    <!-- Mini clima no header -->
+    <div id="mor-clima-mini" style="display:flex;align-items:center;gap:8px;margin-bottom:14px;position:relative;z-index:1;background:rgba(255,255,255,.1);border-radius:12px;padding:8px 12px">
+      <div id="mor-clima-icon" style="font-size:22px">🌡️</div>
+      <div>
+        <div id="mor-clima-temp" style="font-size:16px;font-weight:900;color:#fff;line-height:1">--°C</div>
+        <div id="mor-clima-desc" style="font-size:10px;color:rgba(255,255,255,.7);margin-top:1px">Carregando...</div>
+      </div>
+    </div>
+
+    <!-- Mini clima no header -->
+    <div id="mor-clima-mini" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;position:relative;z-index:1;background:rgba(255,255,255,.1);border-radius:12px;padding:8px 14px">
+      <div id="mor-clima-icon" style="font-size:24px;line-height:1">🌡️</div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:baseline;gap:4px">
+          <div id="mor-clima-temp" style="font-size:18px;font-weight:900;color:#fff;line-height:1">--°</div>
+          <div id="mor-clima-desc" style="font-size:10px;color:rgba(255,255,255,.7)">Carregando...</div>
+        </div>
+        <div id="mor-clima-city" style="font-size:9px;color:rgba(255,255,255,.5);margin-top:2px">📍 --</div>
+      </div>
+      <div id="mor-clima-preview" style="display:flex;gap:8px"></div>
+    </div>
     <!-- Saudação + avatar -->
     <div style="display:flex;align-items:center;gap:14px;position:relative;z-index:1">
       <div id="mor-avatar" style="width:54px;height:54px;background:linear-gradient(135deg,rgba(255,255,255,.25),rgba(255,255,255,.1));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;flex-shrink:0;border:2px solid rgba(255,255,255,.3);box-shadow:0 4px 12px rgba(0,0,0,.2)">?</div>
