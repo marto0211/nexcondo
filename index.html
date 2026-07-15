@@ -7094,11 +7094,17 @@ function voltarLoginPrincipal(){
 function _filtrarMovMorador(movs, mor) {
   return movs.filter(function(m) {
     if(m.tipo !== 'receita') return false;
-    // 1. Tem ID direto do morador
+    // 1. ID direto do morador
     if(m.moradorId && m.moradorId === mor.id) return true;
-    // 2. Tem o apto preenchido E corresponde
+    // 2. Campo apto corresponde ao apto do morador
     if(m.apto && mor.apto && String(m.apto).trim() === String(mor.apto).trim()) return true;
-    // NÃO filtrar por nome — é ambíguo e pega lançamentos de outros
+    // 3. Campo imovel contém o número do apto (ex: "Marto — Apto 01")
+    if(m.imovel && mor.apto) {
+      var aptoStr = String(mor.apto).trim();
+      var imovelStr = String(m.imovel);
+      // Verificar se contém o número do apto como número isolado
+      if(new RegExp('\\b0*'+aptoStr+'\\b').test(imovelStr)) return true;
+    }
     return false;
   });
 }
@@ -7494,8 +7500,6 @@ function doLoginMorador(){
     }
     // Iniciar relógio do portal
     _iniciarRelogioPortal();
-    // Carregar clima no header
-    setTimeout(_morCarregarTempo, 1000);
     document.getElementById('morador-screen').classList.add('hidden');
     document.getElementById('morador-screen').style.cssText='display:none';
     var maEl=document.getElementById('morador-app');
@@ -7503,6 +7507,8 @@ function doLoginMorador(){
     maEl.style.cssText='display:block!important;min-height:100vh;position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;background:#F0F4F8;overflow-y:auto;-webkit-overflow-scrolling:touch';
     window.scrollTo(0,0);
     morNavegar('inicio',null);
+    // Carregar clima DEPOIS do DOM estar visível
+    setTimeout(_morCarregarTempo, 500);
   }
 
   // Buscar dados atualizados do Supabase antes de validar
@@ -7797,6 +7803,7 @@ function morNavegar(aba,btn){
     '</div>';
 
     content.innerHTML=
+      // Gráfico com cards de mês
       '<div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);border-radius:20px;padding:20px 16px 0;margin-bottom:12px;color:#fff;position:relative;overflow:hidden">'+
         '<div style="position:relative;z-index:1">'+
           '<div style="font-size:10px;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Total pago</div>'+
@@ -7809,17 +7816,8 @@ function morNavegar(aba,btn){
           '<div style="flex-shrink:0;width:4px"></div>'+cardsHTML2+'<div style="flex-shrink:0;width:4px"></div>'+
         '</div>'+
       '</div>'+
-      detalheHTML+reciboMes+
-      card('📋 Extrato',movsMor2.length?movsMor2.slice(0,10).map(function(m){
-        var isP=m.status==='pago';
-        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f8fafc">'+
-          '<div style="width:38px;height:38px;border-radius:12px;background:'+(isP?'#EEF2FF':'#FEF3C7')+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">'+(isP?'✅':'⏳')+'</div>'+
-          '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:#0F172A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m.desc+'</div>'+
-          '<div style="font-size:11px;color:#94a3b8;margin-top:1px">'+m.data+'</div></div>'+
-          '<div style="text-align:right"><div style="font-size:14px;font-weight:800;color:'+(isP?'#4F46E5':'#D97706')+'">'+fmtR2(m.valor)+'</div>'+
-          '<div style="font-size:10px;font-weight:700;color:'+(isP?'#10B981':'#F59E0B')+'">'+(isP?'Pago':'Pendente')+'</div></div></div>';
-      }).join(''):'<div style="padding:28px;text-align:center;color:#CBD5E1;font-size:13px">Nenhum lançamento registrado</div>','#6366F1')+
-      (pix2.chave?'<button onclick="copiarPix()" style="width:100%;padding:13px;background:linear-gradient(135deg,#10B981,#059669);color:#fff;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer">💳 Copiar chave Pix para pagar</button>':'');
+      // Recibo do mês vigente — único recibo mostrado
+      reciboMes;
     window._morMeses=meses6;
 
   } else if(aba==='chamados'){
