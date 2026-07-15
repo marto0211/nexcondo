@@ -7240,10 +7240,9 @@ function gerarComprovantePortal(){
 function _morCarregarTempo(){
   var tempoEl=document.getElementById('mor-tempo-widget');
   if(!tempoEl)return;
-  tempoEl.innerHTML='<div style="text-align:center;padding:16px;color:rgba(255,255,255,.6);font-size:12px">📍 Obtendo localização...</div>';
+  tempoEl.innerHTML='<div style="text-align:center;padding:12px;color:rgba(255,255,255,.6);font-size:12px">🌡️ Carregando previsão do tempo...</div>';
 
   var _renderTempo=function(lat,lon,cidade){
-    tempoEl.innerHTML='<div style="text-align:center;padding:12px;color:rgba(255,255,255,.6);font-size:12px">⏳ Carregando previsão...</div>';
     // Open-Meteo — gratuito, sem CORS, sem API key
     var url='https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon+
       '&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m'+
@@ -7334,34 +7333,16 @@ function _morCarregarTempo(){
       });
   };
 
-  // Usar Salvador BA como padrão — funciona sempre
-  // Tenta geolocalização mas não bloqueia
-  var _lat='-12.9714', _lon='-38.5014', _cidade='Salvador, BA';
-  
-  var _doRender=function(){_renderTempo(_lat,_lon,_cidade);};
-  
+  // Carregar Salvador imediatamente, atualiza se tiver geolocalização
+  _renderTempo('-12.9714','-38.5014','Salvador, BA');
+  // Atualizar com localização real se disponível (em background)
   if(navigator.geolocation){
-    var _geoTimeout=setTimeout(_doRender, 4000); // fallback se geo demorar
-    navigator.geolocation.getCurrentPosition(
-      function(pos){
-        clearTimeout(_geoTimeout);
-        _lat=pos.coords.latitude.toFixed(4);
-        _lon=pos.coords.longitude.toFixed(4);
-        // Cidade via nominatim com timeout
-        var _nomTimeout=setTimeout(function(){_renderTempo(_lat,_lon,'');},3000);
-        fetch('https://nominatim.openstreetmap.org/reverse?lat='+_lat+'&lon='+_lon+'&format=json&accept-language=pt')
-          .then(function(r){return r.json();})
-          .then(function(geo){
-            clearTimeout(_nomTimeout);
-            _cidade=(geo.address&&(geo.address.city||geo.address.town||geo.address.village))||'';
-            _renderTempo(_lat,_lon,_cidade);
-          }).catch(function(){clearTimeout(_nomTimeout);_renderTempo(_lat,_lon,'');});
-      },
-      function(){clearTimeout(_geoTimeout);_doRender();},
-      {timeout:3000,maximumAge:300000}
-    );
-  } else {
-    _doRender();
+    navigator.geolocation.getCurrentPosition(function(pos){
+      var lat=pos.coords.latitude.toFixed(4);
+      var lon=pos.coords.longitude.toFixed(4);
+      _renderTempo(lat,lon,'');
+    },function(){},
+    {timeout:5000,maximumAge:600000});
   }
 }
 
@@ -8112,16 +8093,24 @@ function gerarComprovanteMorador(moradorId){
   var mor=mors.find(function(m){return m.id===moradorId;});
   if(!mor){toast('Morador não encontrado.');return;}
   var cfg=getConfig();
-  var movs=getMovimentacoes().filter(function(m){
+  // Ordenar todos os lançamentos por data mais recente
+  var todosMovs=getMovimentacoes().sort(function(a,b){
+    return(b.dataISO||'').localeCompare(a.dataISO||'');
+  });
+  var movs=todosMovs.filter(function(m){
     if(m.tipo!=='receita') return false;
-    // Por ID do morador
+    // 1. Por ID direto
     if(m.moradorId&&m.moradorId===moradorId) return true;
-    // Por número do apto
+    // 2. Por número do apto
     if(m.apto&&mor.apto&&String(m.apto).trim()===String(mor.apto).trim()) return true;
-    // Por nome no campo imovel
-    if(m.imovel&&mor.nome){
-      var primeiroNome=mor.nome.split(' ')[0].toLowerCase();
-      if(m.imovel.toLowerCase().indexOf(primeiroNome)>=0) return true;
+    // 3. Por nome/sobrenome no campo imovel ou desc
+    if(mor.nome){
+      var nome=mor.nome.toLowerCase();
+      var partes=nome.split(' ');
+      var campo=(m.imovel||m.desc||'').toLowerCase();
+      for(var pi=0;pi<partes.length;pi++){
+        if(partes[pi].length>3&&campo.indexOf(partes[pi])>=0) return true;
+      }
     }
     return false;
   });
