@@ -7255,8 +7255,8 @@ function gerarComprovantePortal(){
 
 function _morCarregarTempo(){
   var tempoEl=document.getElementById('mor-tempo-widget');
-  if(!tempoEl)return;
-  tempoEl.innerHTML='<div style="text-align:center;padding:12px;color:rgba(255,255,255,.6);font-size:12px">🌡️ Carregando previsão do tempo...</div>';
+  // Mesmo sem o widget da aba Mais, atualiza o mini clima do header
+  if(tempoEl) tempoEl.innerHTML='<div style="text-align:center;padding:12px;color:rgba(255,255,255,.6);font-size:12px">🌡️ Carregando...</div>';
 
   var _renderTempo=function(lat,lon,cidade){
     // Open-Meteo — gratuito, sem CORS, sem API key
@@ -7315,32 +7315,36 @@ function _morCarregarTempo(){
               '</div>';
           }).join('');
         }
-        tempoEl.innerHTML=
-          '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">'+
-            '<div style="font-size:52px;line-height:1">'+icon+'</div>'+
-            '<div>'+
-              '<div style="font-size:32px;font-weight:900;color:#fff;line-height:1">'+temp+'°C</div>'+
-              '<div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:3px">'+desc+'</div>'+
-              (cidade?'<div style="font-size:10px;color:rgba(255,255,255,.55);margin-top:2px">📍 '+cidade+'</div>':'')+
-              '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:2px">'+
-                '💧 '+hum+'% · 💨 '+wind+'km/h'+
+        // Atualizar SEMPRE o mini clima do header
+        var hIcon=document.getElementById('mor-clima-icon');
+        var hTemp=document.getElementById('mor-clima-temp');
+        var hDesc=document.getElementById('mor-clima-desc');
+        var hCity=document.getElementById('mor-clima-city');
+        if(hIcon) hIcon.textContent=icon;
+        if(hTemp) hTemp.textContent=temp+'°';
+        if(hDesc) hDesc.textContent=desc;
+        if(hCity) hCity.textContent='📍 '+(cidade||'--');
+
+        // Atualizar widget da aba Mais (se estiver aberta)
+        if(tempoEl){
+          tempoEl.innerHTML=
+            '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">'+
+              '<div style="font-size:52px;line-height:1">'+icon+'</div>'+
+              '<div>'+
+                '<div style="font-size:32px;font-weight:900;color:#fff;line-height:1">'+temp+'°C</div>'+
+                '<div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:3px">'+desc+'</div>'+
+                (cidade?'<div style="font-size:10px;color:rgba(255,255,255,.55);margin-top:2px">📍 '+cidade+'</div>':'')+
+                '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:2px">💧 '+hum+'% · 💨 '+wind+'km/h</div>'+
               '</div>'+
             '</div>'+
-          '</div>'+
-          '<div style="display:flex;background:rgba(255,255,255,.12);border-radius:14px;padding:10px;gap:4px">'+
-            previsoes+
-          '</div>';
-        // Atualizar mini clima no header
-        var ti=document.getElementById('mor-clima-icon');
-        var tt=document.getElementById('mor-clima-temp');
-        var td=document.getElementById('mor-clima-desc');
-        var tc=document.getElementById('mor-clima-city');
-        var tp=document.getElementById('mor-clima-preview');
-        if(ti) ti.textContent=icon;
-        if(tt) tt.textContent=temp+'°';
-        if(td) td.textContent=desc;
-        if(tc&&cidade) tc.textContent='📍 '+cidade;
-        if(tp) tp.innerHTML=previsoes.replace(/flex:1/g,'').replace(/padding:6px 4px/g,'padding:4px 2px').replace(/font-size:20px/g,'font-size:14px').replace(/font-size:11px/g,'font-size:9px').replace(/font-size:9px/g,'font-size:8px').replace(/font-size:10px/g,'font-size:9px');
+            '<div style="display:flex;background:rgba(255,255,255,.12);border-radius:14px;padding:10px;gap:4px">'+
+              previsoes+
+            '</div>';
+        }
+
+        // Atualizar outro widget de tempo no header completo também
+        var headerTempoEl=document.getElementById('mor-header-tempo');
+        if(headerTempoEl) headerTempoEl.innerHTML=icon+' '+temp+'°C';
       }).catch(function(e){
         tempoEl.innerHTML=
           '<div style="display:flex;align-items:center;gap:10px;padding:8px">'+
