@@ -4079,6 +4079,11 @@ function getMovForm(){
     var morEnc=getMoradores().find(function(mm){return mm.id===moradorId;});
     if(morEnc)imovelTexto=morEnc.nome+' — Apto '+morEnc.apto;
   }
+  var morApto='';
+  if(moradorId){
+    var morEnc2=getMoradores().find(function(mm){return mm.id===moradorId;});
+    if(morEnc2) morApto=morEnc2.apto;
+  }
   return {
     desc:(document.getElementById('mv-desc')||{value:''}).value.trim(),
     valor:(document.getElementById('mv-valor')||{value:''}).value,
@@ -4086,6 +4091,7 @@ function getMovForm(){
     categoria:categoria,
     status:(document.getElementById('mv-status')||{value:'pago'}).value,
     moradorId:moradorId,
+    apto:morApto,
     imovel:imovelTexto,
     data:data, dataISO:iso
   };
@@ -4693,7 +4699,7 @@ function pixConfirmarPagamento(btn){
       var dtISO=(document.getElementById('pix-data-pgto')||{value:''}).value;
       var pp=dtISO.split('-');
       var dtFmt=pp.length===3?pp[2]+'/'+pp[1]+'/'+pp[0]:hoje();
-      saveMovimentacao({desc:'Taxa condominial — Apto '+d.apto+' (Pix)',valor:d.valor,tipo:'receita',categoria:'Receita',status:'pago',data:dtFmt,dataISO:dtISO,imovel:d.nome+' — Apto '+d.apto,obs:'Pix · ID: '+d.txid});
+      saveMovimentacao({desc:'Taxa condominial — Apto '+d.apto+' (Pix)',valor:d.valor,tipo:'receita',categoria:'Receita',status:'pago',data:dtFmt,dataISO:dtISO,imovel:d.nome+' — Apto '+d.apto,obs:'Pix · ID: '+d.txid,moradorId:(d.mid||''),apto:(d.apto||'')});
       if(d.mid){var mors=getMoradores();var mor=mors.find(function(m){return m.id===d.mid;});if(mor){mor.status='adimplente';mor.debito=0;saveMorador(mor);}}
       closeModal();
       toast('✅ Pagamento confirmado! Receita lançada no Financeiro.');
@@ -5798,37 +5804,110 @@ function _processarImportacaoFechamento(texto){
 }
 
 function lancamentoEmLote(){
-  var mors=getMoradores();if(!mors.length){alert('Cadastre os moradores antes.');return;}
-  var pix=getPix();var taxaPadrao=pix.taxa||850;
-  var meses=[{label:'Janeiro 2026',iso:'2026-01-05'},{label:'Fevereiro 2026',iso:'2026-02-05'},{label:'Março 2026',iso:'2026-03-05'},{label:'Abril 2026',iso:'2026-04-05'},{label:'Maio 2026',iso:'2026-05-05'},{label:'Junho 2026',iso:'2026-06-05'},{label:'Julho 2026',iso:'2026-07-05'},{label:'Agosto 2026',iso:'2026-08-05'},{label:'Setembro 2026',iso:'2026-09-05'},{label:'Outubro 2026',iso:'2026-10-05'},{label:'Novembro 2026',iso:'2026-11-05'},{label:'Dezembro 2026',iso:'2026-12-05'},{label:'Janeiro 2025',iso:'2025-01-05'},{label:'Fevereiro 2025',iso:'2025-02-05'},{label:'Março 2025',iso:'2025-03-05'},{label:'Abril 2025',iso:'2025-04-05'},{label:'Maio 2025',iso:'2025-05-05'},{label:'Junho 2025',iso:'2025-06-05'},{label:'Julho 2025',iso:'2025-07-05'},{label:'Agosto 2025',iso:'2025-08-05'},{label:'Setembro 2025',iso:'2025-09-05'},{label:'Outubro 2025',iso:'2025-10-05'},{label:'Novembro 2025',iso:'2025-11-05'},{label:'Dezembro 2025',iso:'2025-12-05'}];
+  var mors=getMoradores();
+  if(!mors.length){alert('Cadastre os moradores antes.');return;}
+  var pix=getPix();
+  var taxaPadrao=Number(pix.taxa)||Number((getConfig().taxaCondominio))||100;
+  var meses=[
+    {label:'Julho 2026',iso:'2026-07-05'},
+    {label:'Agosto 2026',iso:'2026-08-05'},
+    {label:'Setembro 2026',iso:'2026-09-05'},
+    {label:'Outubro 2026',iso:'2026-10-05'},
+    {label:'Novembro 2026',iso:'2026-11-05'},
+    {label:'Dezembro 2026',iso:'2026-12-05'},
+    {label:'Janeiro 2026',iso:'2026-01-05'},
+    {label:'Fevereiro 2026',iso:'2026-02-05'},
+    {label:'Março 2026',iso:'2026-03-05'},
+    {label:'Abril 2026',iso:'2026-04-05'},
+    {label:'Maio 2026',iso:'2026-05-05'},
+    {label:'Junho 2026',iso:'2026-06-05'},
+    {label:'Julho 2025',iso:'2025-07-05'},
+    {label:'Agosto 2025',iso:'2025-08-05'},
+    {label:'Setembro 2025',iso:'2025-09-05'},
+    {label:'Outubro 2025',iso:'2025-10-05'},
+    {label:'Novembro 2025',iso:'2025-11-05'},
+    {label:'Dezembro 2025',iso:'2025-12-05'}
+  ];
   var opsMeses=meses.map(function(m,i){return '<option value="'+i+'">'+m.label+'</option>';}).join('');
-  var optsMors=mors.map(function(m,i){return '<label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border);cursor:pointer"><input type="checkbox" value="'+i+'" checked style="width:16px;height:16px;cursor:pointer"><span style="font-size:13px;color:var(--text)">'+m.nome+' — Apto '+m.apto+'</span><span style="margin-left:auto;font-size:11px;color:var(--text3)">R$ '+(m.taxaCustom||taxaPadrao).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</span></label>';}).join('');
+  var optsMors=mors.map(function(m,i){
+    return '<label style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f1f5f9;cursor:pointer">'+
+      '<input type="checkbox" value="'+i+'" checked style="width:16px;height:16px;cursor:pointer;accent-color:#6366F1">'+
+      '<span style="font-size:13px;color:#1e293b;flex:1">'+m.nome+' — Apto '+m.apto+'</span>'+
+      '<span style="font-size:11px;color:#6366F1;font-weight:600">R$ '+Number(m.taxaCustom||taxaPadrao).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</span>'+
+      '</label>';
+  }).join('');
+
   modal('📅 Lançamento em lote',
-    '<p style="font-size:13px;color:var(--text2);margin-bottom:14px">Lança a taxa de todos os moradores selecionados de uma vez.</p>'+
-    '<div class="form-row"><div><label class="form-label">Mês de referência</label><select id="lote-mes" class="form-select">'+opsMeses+'</select></div>'+
-    '<div><label class="form-label">Valor padrão (R$)</label><input id="lote-valor" type="number" step="0.01" class="form-input" value="'+taxaPadrao+'"></div></div>'+
-    '<div class="form-row"><div><label class="form-label">Status</label><select id="lote-status" class="form-select"><option value="pago">Pago</option><option value="pendente">Pendente</option></select></div>'+
-    '<div><label class="form-label">Data</label><input id="lote-data" type="date" class="form-input" value="'+new Date().toISOString().slice(0,10)+'"></div></div>'+
-    '<div style="background:var(--bg);border-radius:8px;padding:12px;max-height:200px;overflow-y:auto;margin-bottom:8px">'+
-    '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:11px;font-weight:600;color:var(--text2)">Selecionar moradores:</span><button onclick="loteToggleAll()" style="background:none;border:none;font-size:11px;color:var(--accent);cursor:pointer">Marcar/desmarcar todos</button></div>'+
+    '<div style="background:#EEF2FF;border-radius:10px;padding:12px;margin-bottom:14px;font-size:12px;color:#4338CA">'+
+    '💡 Selecione o mês, valor e status. Clique em <strong>Lançar para todos</strong>.</div>'+
+    '<div class="form-row">'+
+      '<div><label class="form-label">Mês de referência</label><select id="lote-mes" class="form-select">'+opsMeses+'</select></div>'+
+      '<div><label class="form-label">Valor (R$)</label><input id="lote-valor" type="number" step="0.01" class="form-input" value="'+taxaPadrao+'"></div>'+
+    '</div>'+
+    '<div class="form-row">'+
+      '<div><label class="form-label">Status</label><select id="lote-status" class="form-select">'+
+        '<option value="pendente">Pendente (a pagar)</option>'+
+        '<option value="pago">Pago</option>'+
+      '</select></div>'+
+      '<div><label class="form-label">Data de vencimento</label><input id="lote-data" type="date" class="form-input" value="'+new Date().toISOString().slice(0,10)+'"></div>'+
+    '</div>'+
+    '<div style="background:#f8fafc;border-radius:8px;padding:12px;max-height:220px;overflow-y:auto">'+
+    '<div style="display:flex;justify-content:space-between;margin-bottom:8px">'+
+      '<span style="font-size:11px;font-weight:600;color:#64748b">Moradores ('+mors.length+'):</span>'+
+      '<button type="button" onclick="loteToggleAll()" style="background:none;border:none;font-size:11px;color:#6366F1;cursor:pointer;font-weight:600">Marcar/Desmarcar todos</button>'+
+    '</div>'+
     '<div id="lote-mors">'+optsMors+'</div></div>',
     function(){
       var mesIdx=parseInt((document.getElementById('lote-mes')||{value:'0'}).value)||0;
       var mes=meses[mesIdx];
       var valor=parseFloat((document.getElementById('lote-valor')||{value:taxaPadrao}).value)||taxaPadrao;
-      var status=(document.getElementById('lote-status')||{value:'pago'}).value;
-      var dtISO=(document.getElementById('lote-data')||{value:''}).value;
-      var pp=dtISO.split('-');var dtFmt=pp.length===3?pp[2]+'/'+pp[1]+'/'+pp[0]:hoje();
+      var status=(document.getElementById('lote-status')||{value:'pendente'}).value;
+      var dtISO=(document.getElementById('lote-data')||{value:new Date().toISOString().slice(0,10)}).value||new Date().toISOString().slice(0,10);
+      var pp=dtISO.split('-');
+      var dtFmt=pp.length===3?pp[2]+'/'+pp[1]+'/'+pp[0]:hoje();
       var checks=document.querySelectorAll('#lote-mors input[type=checkbox]:checked');
       if(!checks.length){alert('Selecione pelo menos um morador.');return;}
       var count=0;
-      checks.forEach(function(cb){var m=mors[parseInt(cb.value)];if(m){var vMor=m.taxaCustom||valor;saveMovimentacao({desc:'Taxa condominial — '+mes.label+' — Apto '+m.apto,valor:vMor,tipo:'receita',categoria:'Receita',status:status,data:dtFmt,dataISO:dtISO,imovel:m.nome+' — Apto '+m.apto});if(status==='pago'&&m.status==='inadimplente'){m.status='adimplente';m.debito=0;saveMorador(m);}count++;}});
-      closeModal();toast('✅ '+count+' lançamentos realizados em '+mes.label+'!');navigate('financeiro');
+      checks.forEach(function(cb){
+        var m=mors[parseInt(cb.value)];
+        if(!m)return;
+        var vMor=Number(m.taxaCustom)||valor;
+        // Verificar se já existe lançamento para este morador neste mês
+        var jaExiste=(DB.get('movimentacoes')||[]).find(function(mv){
+          return mv.moradorId===m.id && mv.dataISO===dtISO &&
+                 mv.tipo==='receita' && (mv.desc||'').indexOf(mes.label)>=0;
+        });
+        if(jaExiste){
+          console.log('Já existe para',m.nome,mes.label);
+          count++;
+          return;
+        }
+        saveMovimentacao({
+          desc:'Taxa condominial — '+mes.label+' — Apto '+m.apto,
+          valor:vMor,
+          tipo:'receita',
+          categoria:'Receita',
+          status:status,
+          data:dtFmt,
+          dataISO:dtISO,
+          imovel:m.nome+' — Apto '+m.apto,
+          moradorId:m.id,
+          apto:String(m.apto)
+        });
+        if(status==='pendente'){m.status='inadimplente';m.debito=vMor;saveMorador(m);}
+        if(status==='pago'&&m.status==='inadimplente'){m.status='adimplente';m.debito=0;saveMorador(m);}
+        count++;
+      });
+      closeModal();
+      toast('✅ '+count+' lançamentos em '+mes.label+'!');
+      navigate('financeiro');
     }
   );
-  document.getElementById('modal-save').textContent='✅ Lançar para todos';
-  document.getElementById('modal-save').style.background='#2d2d6e';
-  document.getElementById('modal-save').style.color='#fff';
+  // Definir botão após modal abrir
+  setTimeout(function(){
+    var btn=document.getElementById('modal-save');
+    if(btn){btn.textContent='✅ Lançar para todos';btn.style.background='linear-gradient(135deg,#6366F1,#4F46E5)';btn.style.color='#fff';}
+  },50);
 }
 function loteToggleAll(){var checks=document.querySelectorAll('#lote-mors input[type=checkbox]');var allChecked=Array.from(checks).every(function(c){return c.checked;});checks.forEach(function(c){c.checked=!allChecked;});}
 
@@ -7091,6 +7170,30 @@ function voltarLoginPrincipal(){
   document.body.style.overflow='';
 }
 
+function getMoradorMovimentacoes(mor){
+  var aptoStr=String(mor.apto||'').trim();
+  var nomeFull=(mor.nome||'').toLowerCase();
+  return (DB.get('movimentacoes')||[]).filter(function(m){
+    if(m.tipo !== 'receita') return false;
+    // 1. ID direto — mais confiável
+    if(m.moradorId && m.moradorId === mor.id) return true;
+    // 2. Campo apto numérico
+    if(m.apto && aptoStr && String(m.apto).trim() === aptoStr) return true;
+    // 3. Campo imovel contém apto ou nome
+    if(m.imovel && aptoStr){
+      var imovelStr=String(m.imovel).toLowerCase();
+      if(new RegExp('\\b0*'+aptoStr+'\\b').test(imovelStr)) return true;
+      if(nomeFull.length > 4 && imovelStr.indexOf(nomeFull) >= 0) return true;
+    }
+    // 4. Descrição tem "Apto XX" — lançamentos em lote antigos sem moradorId
+    if(m.desc && aptoStr){
+      var descStr=String(m.desc).toLowerCase();
+      if(new RegExp('apto\\s*0*'+aptoStr+'\\b').test(descStr)) return true;
+    }
+    return false;
+  }).sort(function(a,b){return(b.dataISO||'').localeCompare(a.dataISO||'');});
+}
+
 function _filtrarMovMorador(movs, mor) {
   return movs.filter(function(m) {
     if(m.tipo !== 'receita') return false;
@@ -7107,6 +7210,95 @@ function _filtrarMovMorador(movs, mor) {
     }
     return false;
   });
+}
+
+function _comprovanteMorPortal(){
+  if(_moradorAtual) gerarComprovanteMorador(_moradorAtual.id);
+}
+
+function gerarReciboConsolidado(){
+  var mor=_moradorAtual;
+  if(!mor)return;
+  var pix=DB.get('pix')||{};
+  var cfg=getConfig();
+  var movs=_filtrarMovMorador(getMovimentacoes(),mor).filter(function(m){return m.status==='pendente';})
+    .sort(function(a,b){return(a.dataISO||'').localeCompare(b.dataISO||'');});
+  if(!movs.length){toast('Não há débitos pendentes!');return;}
+  var fmtR=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});};
+  var total=movs.reduce(function(s,m){return s+Number(m.valor||0);},0);
+  var agora=new Date();
+  var linhas=movs.map(function(m){
+    return '<tr>'+
+      '<td style="padding:10px 12px;font-size:13px;border-bottom:1px solid #FEF3C7">'+m.data+'</td>'+
+      '<td style="padding:10px 12px;font-size:13px;border-bottom:1px solid #FEF3C7">'+m.desc+'</td>'+
+      '<td style="padding:10px 12px;font-size:13px;font-weight:700;color:#D97706;border-bottom:1px solid #FEF3C7;text-align:right">'+fmtR(m.valor)+'</td>'+
+      '</tr>';
+  }).join('');
+  var html='<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">'+
+    '<meta name="viewport" content="width=device-width,initial-scale=1">'+
+    '<title>Débitos em Aberto — '+mor.nome+'</title>'+
+    '<style>*{box-sizing:border-box;margin:0;padding:0}'+
+    'body{font-family:"Segoe UI",Arial,sans-serif;background:#FFF7ED;padding:20px;min-height:100vh}'+
+    '.card{background:#fff;border-radius:20px;max-width:480px;margin:0 auto;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.12)}'+
+    '.header{background:linear-gradient(135deg,#D97706,#F59E0B);padding:24px;color:#fff}'+
+    '.header-logo{display:flex;align-items:center;gap:12px;margin-bottom:16px}'+
+    '.logo-box{width:44px;height:44px;background:rgba(255,255,255,.2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px}'+
+    '.total-area{background:rgba(0,0,0,.2);border-radius:14px;padding:16px;text-align:center}'+
+    '.total-label{font-size:11px;color:rgba(255,255,255,.8);font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}'+
+    '.total-val{font-size:42px;font-weight:900;color:#FFD700;letter-spacing:-.02em}'+
+    '.info-box{padding:16px 20px;border-bottom:1px solid #FEF3C7;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}'+
+    '.info-item .il{font-size:10px;color:#94A3B8;font-weight:700;text-transform:uppercase;margin-bottom:3px}'+
+    '.info-item .iv{font-size:13px;font-weight:700;color:#1E293B}'+
+    'table{width:100%;border-collapse:collapse}'+
+    'th{font-size:10px;color:#94A3B8;font-weight:700;text-transform:uppercase;padding:10px 12px;border-bottom:2px solid #FEF3C7;text-align:left}'+
+    '.pix{margin:16px;background:#FFFBEB;border:2px dashed #FCD34D;border-radius:14px;padding:16px;text-align:center}'+
+    '.pix-l{font-size:10px;color:#92400E;font-weight:700;text-transform:uppercase;margin-bottom:6px}'+
+    '.pix-k{font-size:15px;font-weight:800;color:#D97706;word-break:break-all}'+
+    '.footer{background:#FEF9C3;padding:14px;text-align:center;font-size:11px;color:#92400E;border-top:1px solid #FEF3C7}'+
+    '.btns{padding:16px;display:flex;gap:8px}'+
+    '.btn{flex:1;border:none;border-radius:12px;padding:13px;font-size:13px;font-weight:700;cursor:pointer}'+
+    '.btn-pix{background:linear-gradient(135deg,#10B981,#059669);color:#fff}'+
+    '.btn-print{background:linear-gradient(135deg,#D97706,#F59E0B);color:#fff}'+
+    '@media print{.btns{display:none}body{background:#fff;padding:0}.card{box-shadow:none;border-radius:0;max-width:100%}}'+
+    '</style></head><body>'+
+    '<div class="card">'+
+      '<div class="header">'+
+        '<div class="header-logo">'+
+          '<div class="logo-box">🏢</div>'+
+          '<div><div style="font-size:17px;font-weight:800">'+cfg.nome+'</div>'+
+          '<div style="font-size:11px;opacity:.75">Débitos em Aberto — Pagamento Total</div></div>'+
+        '</div>'+
+        '<div class="total-area">'+
+          '<div class="total-label">⚠️ Total a pagar</div>'+
+          '<div class="total-val">'+fmtR(total)+'</div>'+
+          '<div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:6px">'+movs.length+' lançamento(s) em aberto</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="info-box">'+
+        '<div class="info-item"><div class="il">Morador</div><div class="iv">'+mor.nome+'</div></div>'+
+        '<div class="info-item"><div class="il">Unidade</div><div class="iv">Apto '+mor.apto+'</div></div>'+
+        '<div class="info-item"><div class="il">Emitido</div><div class="iv">'+agora.toLocaleDateString('pt-BR')+'</div></div>'+
+      '</div>'+
+      '<div style="padding:0 20px 16px">'+
+        '<div style="font-size:11px;font-weight:700;color:#D97706;text-transform:uppercase;letter-spacing:.06em;padding:14px 0 8px">📋 Lançamentos pendentes</div>'+
+        '<table><thead><tr><th>Data</th><th>Descrição</th><th style="text-align:right">Valor</th></tr></thead><tbody>'+linhas+'</tbody>'+
+        '<tfoot><tr style="background:#FEF9C3">'+
+          '<td colspan="2" style="padding:10px 12px;font-weight:700;font-size:13px;color:#92400E">TOTAL A PAGAR</td>'+
+          '<td style="padding:10px 12px;font-weight:900;font-size:16px;color:#D97706;text-align:right">'+fmtR(total)+'</td>'+
+        '</tr></tfoot></table>'+
+      '</div>'+
+      (pix.chave?'<div class="pix"><div class="pix-l">💳 Chave Pix para pagamento de todos os débitos</div>'+
+        '<div class="pix-k">'+pix.chave+'</div>'+
+        (pix.nome?'<div style="font-size:11px;color:#92400E;margin-top:4px">Favorecido: '+pix.nome+'</div>':'')+
+        '<div style="font-size:13px;font-weight:700;color:#D97706;margin-top:10px">Valor total: '+fmtR(total)+'</div></div>':'')+
+      '<div class="footer">'+cfg.nome+' — Emitido em '+agora.toLocaleString('pt-BR')+' · NexCondo</div>'+
+      '<div class="btns">'+
+        (pix.chave?'<button class="btn btn-pix" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+pix.chave+'\').then(function(){alert(\'Chave Pix copiada! Cole no seu banco e informe o valor: '+fmtR(total)+'\');})">📋 Copiar Pix</button>':'')+
+        '<button class="btn btn-print" onclick="window.print()">🖨️ Imprimir / PDF</button>'+
+      '</div>'+
+    '</div></body></html>';
+  var w=window.open('','_blank');
+  if(w){w.document.write(html);w.document.close();}
 }
 
 function copiarPix(){
@@ -7516,13 +7708,13 @@ function doLoginMorador(){
   }
 
   // Buscar dados atualizados do Supabase antes de validar
-  var SUPA_URL='https://wovesiyhholprfbhyaxz.supabase.co';
-  var SUPA_KEY='sb_publishable_O2W-ONXXWjDoXSg7Ui6P3g_Eg61DBZd';
-  var CONDO_ID='residencial-ana-silva';
+  var SUPA_URL=SUPABASE_URL;
+  var SUPA_KEY=SUPABASE_KEY;
+  var CONDO_ID=CLOUD_CONDO_ID;
   Promise.all([
-    fetch(SUPA_URL+'/rest/v1/dados_condominio?condo_id=eq.'+CONDO_ID+'&chave=eq.moradores&select=valor',
+    fetch(SUPA_URL+'/rest/v1/nexcondo_data?condo_id=eq.'+CONDO_ID+'&chave=eq.moradores&select=valor',
       {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}}).then(function(r){return r.json();}).catch(function(){return [];}),
-    fetch(SUPA_URL+'/rest/v1/dados_condominio?condo_id=eq.'+CONDO_ID+'&chave=eq.config&select=valor',
+    fetch(SUPA_URL+'/rest/v1/nexcondo_data?condo_id=eq.'+CONDO_ID+'&chave=eq.config&select=valor',
       {headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}}).then(function(r){return r.json();}).catch(function(){return [];})
   ]).then(function(results){
     if(results[0]&&results[0].length&&results[0][0].valor){
@@ -7706,30 +7898,34 @@ function morNavegar(aba,btn){
         (cfg.telefone?'<a href="https://wa.me/55'+cfg.telefone.replace(/\D/g,'')+'" target="_blank" style="display:block;padding:11px;background:#25D366;color:#fff;border-radius:10px;text-align:left;font-size:13px;font-weight:600;text-decoration:none">💬 Falar com o síndico no WhatsApp</a>':'')+'</div>');
 
   } else if(aba==='financeiro'){
+    content.innerHTML='<div style="padding:40px;text-align:center"><div style="font-size:28px;margin-bottom:8px">⏳</div><div style="font-size:13px;color:#94a3b8">Buscando lançamentos...</div></div>';
+
+    var _renderFin=function(){
     var fmtR2=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});};
     var pix2=DB.get('pix')||{};
-    // Filtrar movimentações do morador
-    var movsMor2=_filtrarMovMorador(DB.get('movimentacoes')||[],mor).sort(function(a,b){return(b.dataISO||'').localeCompare(a.dataISO||'');});
+    var cfg2=getConfig();
 
-    var totalPago=movsMor2.filter(function(m){return m.status==='pago';}).reduce(function(s,m){return s+Number(m.valor||0);},0);
-    var totalPend=movsMor2.filter(function(m){return m.status==='pendente';}).reduce(function(s,m){return s+Number(m.valor||0);},0);
+    // ── TODOS os lançamentos do morador (dados já sincronizados)
+    var todasMovs2=getMoradorMovimentacoes(mor);
+    var pendentes2=todasMovs2.filter(function(m){return m.status==='pendente';});
+    var pagos2=todasMovs2.filter(function(m){return m.status==='pago';});
+    var totalPago=pagos2.reduce(function(s,m){return s+Number(m.valor||0);},0);
+    var totalPend=pendentes2.reduce(function(s,m){return s+Number(m.valor||0);},0);
 
-    // 6 meses de dados
+    // ── GRÁFICO 6 MESES ──
     var meses6=[];
     for(var bm=5;bm>=0;bm--){
       var bd2=new Date(); bd2.setMonth(bd2.getMonth()-bm);
-      var pg2=0,pd2=0;
-      movsMor2.forEach(function(mv){
+      var pg6=0,pd6=0;
+      todasMovs2.forEach(function(mv){
         var md3=new Date(mv.dataISO||mv.data);
         if(!isNaN(md3)&&md3.getMonth()===bd2.getMonth()&&md3.getFullYear()===bd2.getFullYear()){
-          if(mv.status==='pago') pg2+=Number(mv.valor||0);
-          else pd2+=Number(mv.valor||0);
+          if(mv.status==='pago') pg6+=Number(mv.valor||0);
+          else pd6+=Number(mv.valor||0);
         }
       });
-      meses6.push({label:bd2.toLocaleString('pt-BR',{month:'short'}),pago:pg2,pend:pd2,total:pg2+pd2});
+      meses6.push({label:bd2.toLocaleString('pt-BR',{month:'short'}),pago:pg6,pend:pd6,total:pg6+pd6});
     }
-
-    // Gráfico linha SVG
     var maxV2=Math.max.apply(null,meses6.map(function(m){return m.total;}).concat([1]));
     var sW2=320,sH2=60;
     var pts2=meses6.map(function(m,i){return{x:16+i*((sW2-32)/5),y:sH2-6-(m.total/maxV2)*(sH2-14)};});
@@ -7745,7 +7941,6 @@ function morNavegar(aba,btn){
       '<path d="'+pd2str+'" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>'+
       pts2.map(function(p){return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="3" fill="#fff" opacity="0.8"/>';}).join('')+'</svg>';
 
-    // Cards de mês
     var cardsHTML2=meses6.map(function(m,i){
       var isAt=i===5;
       var lbl=m.label.charAt(0).toUpperCase()+m.label.slice(1);
@@ -7753,61 +7948,95 @@ function morNavegar(aba,btn){
       return '<div onclick="morSelecionarMes('+i+')" id="mormes-'+i+'" style="flex-shrink:0;width:72px;padding:10px 6px 12px;border-radius:14px;text-align:center;cursor:pointer;background:'+(isAt?'rgba(255,255,255,.18)':'rgba(255,255,255,.06)')+';border:2px solid '+(isAt?'rgba(255,255,255,.7)':'transparent')+';transition:all .2s">'+
         '<div style="font-size:11px;font-weight:'+(isAt?700:500)+';color:rgba(255,255,255,'+(isAt?'1':'.55')+');margin-bottom:8px">'+lbl+'</div>'+
         '<div style="width:9px;height:9px;border-radius:50%;background:'+dotCor+';margin:0 auto 6px"></div>'+
-        '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,'+(m.pago>0?(isAt?'1':'.7'):'.3')+');white-space:nowrap;overflow:hidden">'+
-          (m.pago>0?fmtR2(m.pago):'—')+'</div>'+
-        '</div>';
+        '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,'+(m.total>0?(isAt?'1':'.7'):'.3')+');white-space:nowrap;overflow:hidden">'+(m.total>0?fmtR2(m.pago):'—')+'</div>'+
+      '</div>';
     }).join('');
 
-    var detalheHTML='<div style="background:#fff;border-radius:16px;border:1px solid #E2E8F0;padding:16px;margin-bottom:12px">'+
-      '<div style="font-size:11px;font-weight:700;color:#6366F1;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px" id="mormes-tit">'+
-        meses6[5].label.charAt(0).toUpperCase()+meses6[5].label.slice(1)+' — resumo</div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="mormes-vals">'+
-        '<div style="background:#F0FDF4;border-radius:10px;padding:12px;text-align:center">'+
-          '<div style="font-size:9px;color:#16A34A;font-weight:700;text-transform:uppercase;margin-bottom:4px">✅ Pago</div>'+
-          '<div style="font-size:18px;font-weight:800;color:#15803D" id="mormes-pago">'+fmtR2(meses6[5].pago)+'</div></div>'+
-        '<div style="background:#FFFBEB;border-radius:10px;padding:12px;text-align:center">'+
-          '<div style="font-size:9px;color:#D97706;font-weight:700;text-transform:uppercase;margin-bottom:4px">⏳ Pendente</div>'+
-          '<div style="font-size:18px;font-weight:800;color:#B45309" id="mormes-pend">'+fmtR2(meses6[5].pend)+'</div></div>'+
-      '</div></div>';
+    // ── BLOCO PENDENTES ──
+    var blocosPend='';
+    if(pendentes2.length){
+      var linhasPend=pendentes2.map(function(m){
+        return '<div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #FEF3C7">'+
+          '<div style="width:40px;height:40px;border-radius:12px;background:#FEF9C3;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📄</div>'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-size:13px;font-weight:700;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m.desc+'</div>'+
+            '<div style="font-size:11px;color:#94a3b8;margin-top:1px">📅 Venc: '+m.data+'</div>'+
+          '</div>'+
+          '<div style="text-align:right;flex-shrink:0">'+
+            '<div style="font-size:15px;font-weight:900;color:#D97706">'+fmtR2(m.valor)+'</div>'+
+            '<div style="font-size:9px;color:#F59E0B;font-weight:700;margin-top:1px">⏳ PENDENTE</div>'+
+          '</div>'+
+        '</div>';
+      }).join('');
 
-    // Recibo do mês vigente
-    var agora2=new Date();
-    var mesMov2=movsMor2.filter(function(m){
-      var d=new Date(m.dataISO||m.data);
-      return !isNaN(d)&&d.getMonth()===agora2.getMonth()&&d.getFullYear()===agora2.getFullYear();
-    });
-    var pgMes=mesMov2.filter(function(m){return m.status==='pago';});
-    var pdMes=mesMov2.filter(function(m){return m.status==='pendente';});
-    var mesNome2=agora2.toLocaleString('pt-BR',{month:'long',year:'numeric'});
-    mesNome2=mesNome2.charAt(0).toUpperCase()+mesNome2.slice(1);
-    var reciboMes='<div style="background:#fff;border-radius:16px;border:1px solid #E2E8F0;padding:16px;margin-bottom:12px">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
-        '<div style="font-size:13px;font-weight:700;color:#1e293b">🧾 '+mesNome2+'</div>'+
-        '<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:'+(pdMes.length===0&&pgMes.length>0?'#ECFDF5':'#FEF3C7')+';color:'+(pdMes.length===0&&pgMes.length>0?'#059669':'#D97706')+'">'+
-          (pdMes.length===0&&pgMes.length>0?'✅ PAGO':'⏳ PENDENTE')+'</span></div>'+
-      (mesMov2.length?mesMov2.map(function(m){
-        var isP=m.status==='pago';
-        return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F8FAFC">'+
-          '<div style="width:34px;height:34px;border-radius:10px;background:'+(isP?'#ECFDF5':'#FEF9C3')+';display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">'+(isP?'✅':'⏳')+'</div>'+
-          '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m.desc+'</div>'+
-          '<div style="font-size:10px;color:#94a3b8">'+m.data+'</div></div>'+
-          '<div style="font-size:13px;font-weight:800;color:'+(isP?'#059669':'#D97706')+'">'+fmtR2(m.valor)+'</div></div>';
-      }).join(''):
-      '<div style="text-align:center;padding:16px;color:#94a3b8;font-size:12px">Nenhum lançamento neste mês</div>')+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">'+
-        '<div style="background:#ECFDF5;border-radius:10px;padding:10px;text-align:center">'+
-          '<div style="font-size:9px;color:#16A34A;font-weight:700;text-transform:uppercase;margin-bottom:3px">Pago</div>'+
-          '<div style="font-size:16px;font-weight:900;color:#15803D">'+fmtR2(pgMes.reduce(function(s,m){return s+Number(m.valor||0);},0))+'</div></div>'+
-        '<div style="background:#FEF9C3;border-radius:10px;padding:10px;text-align:center">'+
-          '<div style="font-size:9px;color:#D97706;font-weight:700;text-transform:uppercase;margin-bottom:3px">Pendente</div>'+
-          '<div style="font-size:16px;font-weight:900;color:#B45309">'+fmtR2(pdMes.reduce(function(s,m){return s+Number(m.valor||0);},0))+'</div></div>'+
-      '</div>'+
-      '<button onclick="gerarReciboPixPortal()" style="width:100%;margin-top:12px;padding:12px;background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">🖨️ Imprimir recibo do mês</button>'+
-      (pix2.chave&&pdMes.length>0?'<button onclick="copiarPix()" style="width:100%;margin-top:8px;padding:12px;background:#10B981;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">💳 Copiar chave Pix</button>':'')+
-    '</div>';
+      blocosPend=
+        '<div style="background:#FFFBEB;border:2px solid #FCD34D;border-radius:18px;padding:16px;margin-bottom:12px">'+
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">'+
+            '<div>'+
+              '<div style="font-size:14px;font-weight:800;color:#92400E">⚠️ Aguardando pagamento</div>'+
+              '<div style="font-size:11px;color:#B45309;margin-top:2px">'+pendentes2.length+' lançamento(s) em aberto</div>'+
+            '</div>'+
+            '<div style="text-align:right">'+
+              '<div style="font-size:10px;color:#92400E;font-weight:600;text-transform:uppercase">Total</div>'+
+              '<div style="font-size:24px;font-weight:900;color:#D97706">'+fmtR2(totalPend)+'</div>'+
+            '</div>'+
+          '</div>'+
+          linhasPend+
+          // Painel de pagamento
+          '<div style="margin-top:14px;background:linear-gradient(135deg,#1E293B,#334155);border-radius:14px;padding:14px">'+
+            '<div style="font-size:10px;color:rgba(255,255,255,.6);font-weight:700;text-transform:uppercase;margin-bottom:8px">💳 Efetuar pagamento via Pix</div>'+
+            (pix2.chave?
+              '<div style="background:rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;margin-bottom:10px">'+
+                '<div style="font-size:9px;color:rgba(255,255,255,.5);font-weight:700;text-transform:uppercase;margin-bottom:4px">Chave Pix</div>'+
+                '<div style="font-size:14px;font-weight:800;color:#fff;word-break:break-all">'+pix2.chave+'</div>'+
+                (pix2.nome?'<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:3px">'+pix2.nome+'</div>':'')+
+                '<div style="font-size:13px;font-weight:700;color:#FFD700;margin-top:6px">Valor: '+fmtR2(totalPend)+'</div>'+
+              '</div>'+
+              '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+                '<button onclick="copiarPix()" style="padding:12px;background:linear-gradient(135deg,#10B981,#059669);border:none;border-radius:10px;font-size:12px;font-weight:700;color:#fff;cursor:pointer">📋 Copiar Pix</button>'+
+                '<button onclick="gerarReciboConsolidado()" style="padding:12px;background:linear-gradient(135deg,#6366F1,#4F46E5);border:none;border-radius:10px;font-size:12px;font-weight:700;color:#fff;cursor:pointer">🖨️ Recibo total</button>'+
+              '</div>':
+              '<div style="text-align:center;color:rgba(255,255,255,.4);font-size:12px;padding:8px">Chave Pix não configurada</div>')+
+          '</div>'+
+        '</div>';
+    } else {
+      blocosPend='<div style="background:#ECFDF5;border:1.5px solid #6EE7B7;border-radius:14px;padding:16px;margin-bottom:12px;text-align:center">'+
+        '<div style="font-size:28px;margin-bottom:6px">🎉</div>'+
+        '<div style="font-size:14px;font-weight:700;color:#065F46">Tudo em dia!</div>'+
+        '<div style="font-size:12px;color:#059669;margin-top:4px">Você não possui débitos pendentes.</div>'+
+      '</div>';
+    }
+
+    // ── HISTÓRICO DE PAGAMENTOS ──
+    var blocosPagos='';
+    if(pagos2.length){
+      blocosPagos=
+        '<div style="background:#fff;border:1px solid #E2E8F0;border-radius:18px;padding:16px;margin-bottom:12px">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+            '<div style="font-size:13px;font-weight:700;color:#1e293b">✅ Histórico de pagamentos</div>'+
+            '<div style="font-size:12px;font-weight:700;color:#10B981">'+fmtR2(totalPago)+'</div>'+
+          '</div>'+
+          pagos2.slice(0,10).map(function(m){
+            return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F8FAFC">'+
+              '<div style="width:36px;height:36px;border-radius:10px;background:#ECFDF5;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">✅</div>'+
+              '<div style="flex:1;min-width:0">'+
+                '<div style="font-size:13px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m.desc+'</div>'+
+                '<div style="font-size:11px;color:#94a3b8;margin-top:1px">'+m.data+'</div>'+
+              '</div>'+
+              '<div style="text-align:right">'+
+                '<div style="font-size:14px;font-weight:800;color:#10B981">'+fmtR2(m.valor)+'</div>'+
+                '<div style="font-size:9px;color:#10B981;font-weight:700">PAGO</div>'+
+              '</div>'+
+            '</div>';
+          }).join('')+
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">'+
+            '<button onclick="gerarReciboPixPortal()" style="padding:11px;background:linear-gradient(135deg,#4F46E5,#7C3AED);border:none;border-radius:10px;font-size:12px;font-weight:700;color:#fff;cursor:pointer">🖨️ Recibo do mês</button>'+
+            '<button onclick="_comprovanteMorPortal()" style="padding:11px;background:#6366F1;border:none;border-radius:10px;font-size:12px;font-weight:700;color:#fff;cursor:pointer">📄 Comprovante geral</button>'+
+          '</div>'+
+        '</div>';
+    }
 
     content.innerHTML=
-      // Gráfico com cards de mês
       '<div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);border-radius:20px;padding:20px 16px 0;margin-bottom:12px;color:#fff;position:relative;overflow:hidden">'+
         '<div style="position:relative;z-index:1">'+
           '<div style="font-size:10px;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Total pago</div>'+
@@ -7815,14 +8044,22 @@ function morNavegar(aba,btn){
           (totalPend>0?'<div style="font-size:12px;color:#FCD34D;font-weight:600;margin-bottom:12px">⏳ '+fmtR2(totalPend)+' pendente</div>':
           '<div style="font-size:12px;color:#4ADE80;font-weight:600;margin-bottom:12px">✅ Sem pendências</div>')+
         '</div>'+
-        '<div style="position:relative;height:64px;margin:0 -16px">'+miniLine2+'</div>'+
-        '<div style="display:flex;gap:6px;padding:8px 0 16px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;position:relative;z-index:1" id="mormes-container">'+
+        '<div style="position:relative;height:60px;margin:0 -16px">'+miniLine2+'</div>'+
+        '<div style="display:flex;gap:6px;padding:8px 0 14px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;position:relative;z-index:1" id="mormes-container">'+
           '<div style="flex-shrink:0;width:4px"></div>'+cardsHTML2+'<div style="flex-shrink:0;width:4px"></div>'+
         '</div>'+
       '</div>'+
-      // Recibo do mês vigente — único recibo mostrado
-      reciboMes;
+      blocosPend+
+      blocosPagos;
     window._morMeses=meses6;
+    }; // fim _renderFin
+
+    // Sincronizar do Supabase usando a função que já funciona no sistema
+    sincronizarDoServidor().then(function(){
+      _renderFin();
+    }).catch(function(){
+      _renderFin();
+    });
 
   } else if(aba==='chamados'){
     var chams=(DB.get('chamados')||[]).filter(function(c){return c.apto===mor.apto||c.moradorId===mor.id;});
