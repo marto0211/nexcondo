@@ -1036,6 +1036,7 @@ function saveMorador(m){
   DB.set('moradores',list);
   setTimeout(function(){_logAudit(isNovo?'➕ Adicionado':'✏️ Editado','Moradores',(isNovo?'Novo morador: ':'Editado: ')+m.nome);},0);
   if(typeof refreshPage==='function')refreshPage();
+  setTimeout(function(){_notificarMovimentacao(m);},200);
 }
 function deleteMorador(id){
   var mor=getMoradores().find(function(m){return m.id===id;});
@@ -1055,19 +1056,22 @@ function saveMovimentacao(m){
   setTimeout(function(){_logAudit(isNovo?'➕ Adicionado':'✏️ Editado','Financeiro',(isNovo?'Nova movimentação: ':'Editado: ')+m.desc+' R$ '+m.valor);},0);
 
   // ── ATUALIZAR SITUAÇÃO DO MORADOR AUTOMATICAMENTE ──
-  if(m.moradorId && m.tipo==='receita'){
+  if(m.tipo==='receita'){
     setTimeout(function(){
       var mors=getMoradores();
-      var mor=mors.find(function(x){return x.id===m.moradorId;});
+      // Encontrar morador por moradorId OU por apto
+      var mor=null;
+      if(m.moradorId) mor=mors.find(function(x){return x.id===m.moradorId;});
+      if(!mor&&m.apto) mor=mors.find(function(x){return String(x.apto).trim()===String(m.apto).trim();});
       if(!mor) return;
 
-      // Recalcular débito total do morador com base em TODAS as movimentações dele
+      // Recalcular débito com base em TODAS as movimentações do morador
       var todasMovs=getMovimentacoes();
       var pendentes=todasMovs.filter(function(mv){
-        return mv.moradorId===m.moradorId && mv.tipo==='receita' && mv.status==='pendente';
+        var mesmaMor=mv.moradorId===mor.id||(mv.apto&&String(mv.apto).trim()===String(mor.apto).trim());
+        return mesmaMor&&mv.tipo==='receita'&&mv.status==='pendente';
       });
       var debitoTotal=pendentes.reduce(function(s,mv){return s+Number(mv.valor||0);},0);
-
       mor.debito=debitoTotal;
       mor.status=debitoTotal>0?'inadimplente':'adimplente';
       saveMorador(mor);
@@ -5652,8 +5656,8 @@ function gerarArquivoFormularioCelular(){
 
   // Ajustar o body: substituir opções de mês e ano
   var bodyFinal=BODY
-    .replace(/<select id="mes-ref">.*?<\/select>/s, '<select id="mes-ref">'+mesOpts+'</select>')
-    .replace(/<select id="ano-ref">.*?<\/select>/s, '<select id="ano-ref">'+anoOpts+'</select>');
+    .replace(/<select id="mes-ref">.*?<\/select>/s, '<select id="mes-ref-2">'+mesOpts+'</select>')
+    .replace(/<select id="ano-ref">.*?<\/select>/s, '<select id="ano-ref-2">'+anoOpts+'</select>');
 
   // Montar HTML final
   var html='<!DOCTYPE html>\n<html lang="pt-BR">\n<head>\n'+
@@ -7212,6 +7216,26 @@ function _filtrarMovMorador(movs, mor) {
   });
 }
 
+function morToggleDark(){
+  var app=document.getElementById('morador-app');
+  if(!app) return;
+  var isDark=app.getAttribute('data-dark')==='1';
+  if(isDark){
+    app.style.background='#F0F4F8';
+    app.removeAttribute('data-dark');
+    document.getElementById('mor-dark-btn').textContent='🌙';
+    localStorage.setItem('nexcondo_mor_dark','0');
+  } else {
+    app.style.background='#0F172A';
+    app.setAttribute('data-dark','1');
+    document.getElementById('mor-dark-btn').textContent='☀️';
+    localStorage.setItem('nexcondo_mor_dark','1');
+    // Escurecer cards
+    var cards=app.querySelectorAll('[style*="background:#fff"]');
+    cards.forEach(function(c){c.style.background='#1E293B';c.style.color='#fff';});
+  }
+}
+
 function _comprovanteMorPortal(){
   if(_moradorAtual) gerarComprovanteMorador(_moradorAtual.id);
 }
@@ -7289,7 +7313,8 @@ function gerarReciboConsolidado(){
       '</div>'+
       (pix.chave?'<div class="pix"><div class="pix-l">💳 Chave Pix para pagamento de todos os débitos</div>'+
         '<div class="pix-k">'+pix.chave+'</div>'+
-        (pix.nome?'<div style="font-size:11px;color:#92400E;margin-top:4px">Favorecido: '+pix.nome+'</div>':'')+
+        (pix.nome?'<div style="font-size:11px;color:#64748b;margin-top:4px">Favorecido: '+pix.nome+'</div>':'')+
+        '<div class="qr-box"><img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='+encodeURIComponent(pix.chave)+'" style="width:120px;height:120px;border-radius:8px" alt="QR Pix"><div style="font-size:10px;color:#64748b;margin-top:4px">📷 Escaneie para pagar</div></div>'+
         '<div style="font-size:13px;font-weight:700;color:#D97706;margin-top:10px">Valor total: '+fmtR(total)+'</div></div>':'')+
       '<div class="footer">'+cfg.nome+' — Emitido em '+agora.toLocaleString('pt-BR')+' · NexCondo</div>'+
       '<div class="btns">'+
@@ -7992,10 +8017,12 @@ function morNavegar(aba,btn){
                 (pix2.nome?'<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:3px">'+pix2.nome+'</div>':'')+
                 '<div style="font-size:13px;font-weight:700;color:#FFD700;margin-top:6px">Valor: '+fmtR2(totalPend)+'</div>'+
               '</div>'+
-              '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+              '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'+
                 '<button onclick="copiarPix()" style="padding:12px;background:linear-gradient(135deg,#10B981,#059669);border:none;border-radius:10px;font-size:12px;font-weight:700;color:#fff;cursor:pointer">📋 Copiar Pix</button>'+
                 '<button onclick="gerarReciboConsolidado()" style="padding:12px;background:linear-gradient(135deg,#6366F1,#4F46E5);border:none;border-radius:10px;font-size:12px;font-weight:700;color:#fff;cursor:pointer">🖨️ Recibo total</button>'+
-              '</div>':
+              '</div>'+
+              '<img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='+encodeURIComponent(pix2.chave)+'" style="width:100%;max-width:120px;display:block;margin:8px auto;border-radius:8px" alt="QR Code Pix">'+
+              '<div style="text-align:center;font-size:10px;color:rgba(255,255,255,.5);margin-bottom:4px">📷 Ou escaneie o QR Code</div>':
               '<div style="text-align:center;color:rgba(255,255,255,.4);font-size:12px;padding:8px">Chave Pix não configurada</div>')+
           '</div>'+
         '</div>';
@@ -8252,6 +8279,105 @@ function morReservar(area){
   });
 }
 
+
+// ══════════════════════════════════════
+// SISTEMA DE COBRANÇAS — Efí Bank + Pix
+// ══════════════════════════════════════
+function abrirConfiguracaoEfi(){
+  var cfg=getConfig(); var efi=cfg.efi||{};
+  modal('⚙️ Configuração Efí Bank',
+    '<div style="background:#EFF6FF;border-radius:10px;padding:12px;margin-bottom:14px;font-size:12px;color:#1D4ED8">'+
+    '💡 Configure sua conta Efí Bank para gerar cobranças Pix com QR Code dinâmico. '+
+    'Obtenha as credenciais em <strong>efi.com.br</strong> → Minha Conta → Credenciais API.</div>'+
+    '<div class="form-full"><label class="form-label">Client ID</label>'+
+    '<input id="efi-client-id" class="form-input" placeholder="Client_Id_..." value="'+(efi.clientId||'')+'"></div>'+
+    '<div class="form-full"><label class="form-label">Client Secret</label>'+
+    '<input id="efi-client-secret" class="form-input" placeholder="Client_Secret_..." value="'+(efi.clientSecret||'')+'"></div>'+
+    '<div class="form-row">'+
+    '<div><label class="form-label">Ambiente</label><select id="efi-ambiente" class="form-select">'+
+    '<option value="homologacao" '+(efi.ambiente!=='producao'?'selected':'')+'>🧪 Homologação</option>'+
+    '<option value="producao" '+(efi.ambiente==='producao'?'selected':'')+'>🚀 Produção</option>'+
+    '</select></div>'+
+    '<div><label class="form-label">Chave Pix (recebimento)</label>'+
+    '<input id="efi-pix-key" class="form-input" placeholder="CPF, CNPJ ou email" value="'+(efi.pixKey||'')+'"></div></div>',
+    function(){
+      var cfg2=getConfig();
+      cfg2.efi={
+        clientId:(document.getElementById('efi-client-id')||{value:''}).value.trim(),
+        clientSecret:(document.getElementById('efi-client-secret')||{value:''}).value.trim(),
+        ambiente:(document.getElementById('efi-ambiente')||{value:'homologacao'}).value,
+        pixKey:(document.getElementById('efi-pix-key')||{value:''}).value.trim()
+      };
+      DB.set('config',cfg2);
+      closeModal();
+      toast('✅ Configuração Efí Bank salva!');
+    }
+  );
+  setTimeout(function(){var b=document.getElementById('modal-save');if(b)b.textContent='💾 Salvar';},50);
+}
+
+function gerarCobrancaMorador(moradorId){
+  var mor=getMoradores().find(function(m){return m.id===moradorId;});
+  if(!mor){toast('Morador não encontrado.');return;}
+  var movsPend=(DB.get('movimentacoes')||[]).filter(function(m){
+    return (m.moradorId===moradorId||(m.apto&&String(m.apto).trim()===String(mor.apto).trim()))&&
+           m.tipo==='receita'&&m.status==='pendente';
+  });
+  var total=movsPend.reduce(function(s,m){return s+Number(m.valor||0);},0);
+  if(!total){toast('Morador sem débitos pendentes.');return;}
+  var cfg=getConfig();
+  var efi=cfg.efi||{};
+  var pix=DB.get('pix')||{};
+  var fmtR=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});};
+  var pixChave=efi.pixKey||pix.chave||'';
+
+  modal('💳 Gerar Cobrança — '+mor.nome,
+    '<div style="background:linear-gradient(135deg,#1E293B,#334155);border-radius:16px;padding:20px;text-align:center;color:#fff;margin-bottom:14px">'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:6px">'+cfg.nome+'</div>'+
+      '<div style="font-size:13px;color:rgba(255,255,255,.8);margin-bottom:6px">Taxa condominial em aberto</div>'+
+      '<div style="font-size:36px;font-weight:900;color:#FFD700;margin-bottom:8px">'+fmtR(total)+'</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.5)">'+movsPend.length+' lançamento(s) pendente(s)</div>'+
+    '</div>'+
+    (pixChave?
+      '<div style="background:#F8FAFC;border-radius:12px;padding:14px;text-align:center;margin-bottom:12px">'+
+        '<div style="font-size:10px;color:#64748b;text-transform:uppercase;margin-bottom:6px">QR Code Pix</div>'+
+        '<img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(pixChave)+'" style="width:160px;height:160px;display:block;margin:0 auto;border-radius:8px" alt="QR Code">'+
+        '<div style="font-size:12px;font-weight:700;color:#4F46E5;margin-top:8px;word-break:break-all">'+pixChave+'</div>'+
+        (pix.nome?'<div style="font-size:11px;color:#64748b;margin-top:2px">Favorecido: '+pix.nome+'</div>':'')+
+        '<div style="font-size:11px;color:#F59E0B;font-weight:600;margin-top:6px">💰 Valor a informar: '+fmtR(total)+'</div>'+
+      '</div>':'<div style="background:#FEF2F2;border-radius:10px;padding:12px;font-size:12px;color:#DC2626;margin-bottom:12px">⚠️ Configure a chave Pix em Configurações → Pix ou em Configurações → Efí Bank</div>')+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+      '<div style="background:#F0FDF4;border-radius:10px;padding:10px;text-align:center">'+
+        '<div style="font-size:9px;color:#16A34A;text-transform:uppercase;font-weight:700;margin-bottom:3px">Morador</div>'+
+        '<div style="font-size:13px;font-weight:700">'+mor.nome.split(' ')[0]+'</div></div>'+
+      '<div style="background:#EEF2FF;border-radius:10px;padding:10px;text-align:center">'+
+        '<div style="font-size:9px;color:#4F46E5;text-transform:uppercase;font-weight:700;margin-bottom:3px">Unidade</div>'+
+        '<div style="font-size:13px;font-weight:700">Apto '+mor.apto+'</div></div>'+
+    '</div>',
+    function(){
+      if(pixChave&&navigator.clipboard){
+        navigator.clipboard.writeText(pixChave).then(function(){toast('📋 Chave Pix copiada! Informe o valor: '+fmtR(total));});
+      }
+      closeModal();
+      // Enviar via WhatsApp se tiver telefone
+      if(mor.telefone){
+        var msg='Olá *'+mor.nome.split(' ')[0]+'*! 👋'+
+          '\n\n📍 *'+cfg.nome+'*'+
+          '\n━━━━━━━━━━━━━━━━'+
+          '\n💰 Seu débito em aberto: *'+fmtR(total)+'*'+
+          (pixChave?'\n\n💳 *Chave Pix:* '+pixChave:'')+
+          '\n\nApós pagar, envie o comprovante.'+
+          '\n\n_'+cfg.nome+' — NexCondo_';
+        window.open('https://wa.me/55'+mor.telefone.replace(/\D/g,'')+'?text='+encodeURIComponent(msg),'_blank');
+      }
+    }
+  );
+  setTimeout(function(){
+    var b=document.getElementById('modal-save');
+    if(b){b.textContent=pixChave?'📋 Copiar chave Pix':'✕ Fechar';b.style.background='linear-gradient(135deg,#10B981,#059669)';b.style.color='#fff';}
+  },50);
+}
+
 // ── BACKUP AUTOMÁTICO ──
 function _backupAutomatico(){
   try {
@@ -8388,28 +8514,83 @@ function gerarMsgWA(mor, cfg){
 // ══════════════════════════════════════════
 // PUSH NOTIFICATION (Service Worker)
 // ══════════════════════════════════════════
+// ══════════════════════════════════════
+// SISTEMA DE NOTIFICAÇÕES PUSH — NexCondo
+// ══════════════════════════════════════
+var _swRegistration = null;
+
+function _registrarServiceWorker(){
+  if(!('serviceWorker' in navigator)) return Promise.resolve(null);
+  return navigator.serviceWorker.register('/sw.js')
+    .then(function(reg){
+      _swRegistration = reg;
+      console.log('✅ Service Worker registrado');
+      return reg;
+    }).catch(function(e){
+      console.warn('SW não disponível:', e.message);
+      return null;
+    });
+}
+
 function solicitarPermissaoNotificacao(){
-  if(!('Notification' in window)){toast('Notificações não suportadas neste browser.');return;}
+  if(!('Notification' in window)){
+    toast('⚠️ Notificações não suportadas neste navegador.');return;
+  }
   if(Notification.permission==='granted'){
-    toast('✅ Notificações já ativadas!');return;
+    toast('✅ Notificações já estão ativadas!');
+    _registrarServiceWorker();
+    return;
   }
   Notification.requestPermission().then(function(p){
     if(p==='granted'){
-      toast('✅ Notificações ativadas!');
-      new Notification('NexCondo',{body:'Você receberá alertas importantes aqui.',icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🏢</text></svg>'});
       localStorage.setItem('nexcondo_notif','true');
+      _registrarServiceWorker().then(function(){
+        // Notificação de boas-vindas
+        enviarNotificacao('NexCondo ativado! 🏢','Você receberá alertas de cobranças, avisos e comunicados aqui.');
+        toast('✅ Notificações ativadas! Você será avisado de novas cobranças.');
+      });
     } else {
-      toast('❌ Permissão negada. Ative manualmente nas configurações do browser.');
+      toast('❌ Permissão negada. Ative nas configurações do seu browser.');
     }
   });
 }
-function enviarNotificacao(titulo, corpo){
-  if(Notification.permission==='granted'&&document.hidden){
-    new Notification('NexCondo — '+titulo,{body:corpo,icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🏢</text></svg>'});
+
+function enviarNotificacao(titulo, corpo, url){
+  if(!('Notification' in window)||Notification.permission!=='granted') return;
+  // Tentar via Service Worker (funciona com app fechado)
+  if(_swRegistration && _swRegistration.showNotification){
+    _swRegistration.showNotification('NexCondo — '+titulo,{
+      body: corpo,
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🏢</text></svg>',
+      vibrate: [200,100,200],
+      data: {url: url||'/'},
+      requireInteraction: true
+    });
+  } else {
+    // Fallback — notificação simples
+    new Notification('NexCondo — '+titulo,{body:corpo});
   }
 }
 
+// Notificar quando salva movimentação (para moradores com notif ativa)
+function _notificarMovimentacao(m){
+  if(!m||m.tipo!=='receita') return;
+  var cfg=getConfig();
+  var morNome='';
+  if(m.moradorId){
+    var mor=getMoradores().find(function(x){return x.id===m.moradorId;});
+    if(mor) morNome=mor.nome.split(' ')[0];
+  }
+  var titulo='Nova cobrança lançada';
+  var corpo=(morNome?morNome+': ':'')+(m.desc||'Taxa condominial')+' — R$ '+Number(m.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+  enviarNotificacao(titulo, corpo, '/');
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
+  // Registrar Service Worker se notificações já foram autorizadas
+  if(localStorage.getItem('nexcondo_notif')==='true'){
+    _registrarServiceWorker();
+  }
   // Migrar dados do CondoGest → NexCondo automaticamente (apenas uma vez)
   if(!localStorage.getItem('nexcondo_migrado')){
     var chaves=['config','moradores','movimentacoes','comunicados','manutencoes','reservas',
@@ -8509,6 +8690,7 @@ document.getElementById('topbar-sub').textContent=new Date().toLocaleDateString(
           </div>
           <div id="mor-clock-date" style="font-size:9px;color:rgba(255,255,255,.6);margin-top:2px;text-transform:capitalize"></div>
         </div>
+        <button onclick="morToggleDark()" id="mor-dark-btn" title="Modo escuro" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:14px;padding:7px 10px;border-radius:20px;cursor:pointer;margin-right:4px">🌙</button>
         <button onclick="doLogoutMorador()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:20px;cursor:pointer">Sair</button>
       </div>
     </div>
