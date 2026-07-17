@@ -8083,10 +8083,22 @@ function morNavegar(aba,btn){
 
     // Sincronizar do Supabase usando a função que já funciona no sistema
     sincronizarDoServidor().then(function(){
+      // Recalcular status do morador com dados frescos
+      var morsAtual=getMoradores();
+      var morAtual=morsAtual.find(function(m){return m.id===mor.id;});
+      if(morAtual){
+        var pendentes=getMoradorMovimentacoes(morAtual).filter(function(m){return m.status==='pendente';});
+        var debitoReal=pendentes.reduce(function(s,m){return s+Number(m.valor||0);},0);
+        if(morAtual.debito!==debitoReal||morAtual.status!==(debitoReal>0?'inadimplente':'adimplente')){
+          morAtual.debito=debitoReal;
+          morAtual.status=debitoReal>0?'inadimplente':'adimplente';
+          saveMorador(morAtual);
+          _moradorAtual=morAtual;
+          mor=morAtual;
+        }
+      }
       _renderFin();
-    }).catch(function(){
-      _renderFin();
-    });
+    }).catch(function(){_renderFin();});
 
   } else if(aba==='chamados'){
     var chams=(DB.get('chamados')||[]).filter(function(c){return c.apto===mor.apto||c.moradorId===mor.id;});
@@ -8102,13 +8114,34 @@ function morNavegar(aba,btn){
       }).join(''):'<div style="text-align:center;color:#94a3b8;padding:12px">Nenhum chamado</div>'),'#FF9800');
 
   } else if(aba==='comunicados'){
-    var comuns2=DB.get('comunicados')||[];
-    content.innerHTML=card('Comunicados',comuns2.length?comuns2.map(function(c){
-      return '<div style="padding:12px;background:#F8FAFC;border-radius:10px;margin-bottom:8px">'+
-        '<div style="font-size:13px;font-weight:700;margin-bottom:4px">'+c.titulo+'</div>'+
-        '<div style="font-size:12px;color:#374151">'+c.mensagem+'</div>'+
-        '<div style="font-size:11px;color:#94a3b8;margin-top:4px">'+c.data+'</div></div>';
-    }).join(''):'<div style="text-align:center;color:#94a3b8;padding:16px">Nenhum comunicado</div>','#059669');
+    content.innerHTML='<div style="padding:32px;text-align:center;color:#94a3b8;font-size:13px">⏳ Buscando comunicados...</div>';
+    sincronizarDoServidor().then(function(){
+      var comuns2=(DB.get('comunicados')||[]).sort(function(a,b){return(b.dataISO||b.data||'').localeCompare(a.dataISO||a.data||'');});
+      content.innerHTML=comuns2.length?
+        '<div style="margin-bottom:8px">'+comuns2.map(function(c){
+          return '<div style="background:#fff;border-radius:14px;border:1px solid #E2E8F0;padding:14px;margin-bottom:10px">'+
+            '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">'+
+              '<div style="font-size:14px;font-weight:700;color:#1e293b;flex:1">'+c.titulo+'</div>'+
+              '<span style="font-size:10px;background:#ECFDF5;color:#059669;padding:2px 8px;border-radius:10px;font-weight:600;flex-shrink:0;margin-left:8px">📢</span>'+
+            '</div>'+
+            '<div style="font-size:13px;color:#374151;line-height:1.5;margin-bottom:8px">'+c.mensagem+'</div>'+
+            '<div style="font-size:11px;color:#94a3b8">📅 '+c.data+'</div>'+
+          '</div>';
+        }).join('')+'</div>':
+        '<div style="background:#fff;border-radius:14px;border:1px solid #E2E8F0;padding:32px;text-align:center">'+
+          '<div style="font-size:32px;margin-bottom:8px">📭</div>'+
+          '<div style="font-size:14px;font-weight:600;color:#374151">Nenhum comunicado</div>'+
+          '<div style="font-size:12px;color:#94a3b8;margin-top:4px">O síndico ainda não enviou comunicados</div>'+
+        '</div>';
+    }).catch(function(){
+      var comuns2=DB.get('comunicados')||[];
+      content.innerHTML=comuns2.length?comuns2.map(function(c){
+        return '<div style="background:#fff;border-radius:14px;border:1px solid #E2E8F0;padding:14px;margin-bottom:10px">'+
+          '<div style="font-size:14px;font-weight:700;margin-bottom:6px">'+c.titulo+'</div>'+
+          '<div style="font-size:13px;color:#374151">'+c.mensagem+'</div>'+
+          '<div style="font-size:11px;color:#94a3b8;margin-top:4px">'+c.data+'</div></div>';
+      }).join(''):'<div style="padding:32px;text-align:center;color:#94a3b8">Nenhum comunicado disponível</div>';
+    });
 
   } else if(aba==='reservas'){
     var areas=['Salao de Festas','Churrasqueira','Quadra','Piscina','Academia','Espaco Gourmet'];
@@ -8237,25 +8270,75 @@ function morSelecionarMes(idx){
 }
 
 function morAbrirChamado(){
-  var cats=['Hidraulico','Eletrico','Limpeza','Elevador','Portao','Iluminacao','Outros'];
-  var h='<div class="form-full"><label class="form-label">Titulo</label><input id="mor-ch-titulo" class="form-input" placeholder="Ex: Vazamento na cozinha"></div>'+
-    '<div class="form-full"><label class="form-label">Categoria</label><select id="mor-ch-cat" class="form-select">'+cats.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div>'+
-    '<div class="form-full"><label class="form-label">Descricao</label><textarea id="mor-ch-desc" class="form-textarea" placeholder="Descreva o problema..."></textarea></div>';
-  modal('Novo chamado',h,function(){
-    var titulo=document.getElementById('mor-ch-titulo').value.trim();
-    if(!titulo){alert('Digite o titulo.');return;}
-    var mor=_moradorAtual;
-    var chams=DB.get('chamados')||[];
-    chams.push({id:'ch_'+Date.now(),titulo:titulo,
-      categoria:document.getElementById('mor-ch-cat').value,
-      descricao:document.getElementById('mor-ch-desc').value.trim(),
-      apto:mor.apto,moradorId:mor.id,nome:mor.nome,
-      status:'aberto',prioridade:'Media',
-      data:new Date().toLocaleDateString('pt-BR'),
-      dataISO:new Date().toISOString()});
-    DB.set('chamados',chams);
-    closeModal();morNavegar('chamados',null);toast('Chamado aberto!');
+  var cats=['Hidráulico','Elétrico','Limpeza','Elevador','Portão','Iluminação','Outros'];
+  // Modal interno ao portal — z-index acima do portal (999)
+  var overlay=document.createElement('div');
+  overlay.id='mor-modal-overlay';
+  overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:1001;display:flex;align-items:flex-end;justify-content:center;padding:0';
+  overlay.innerHTML=
+    '<div style="background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:500px;padding:24px 20px;max-height:90vh;overflow-y:auto">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">'+
+        '<div style="font-size:16px;font-weight:700;color:#1e293b">🎫 Novo chamado</div>'+
+        '<button onclick="morFecharModal()" style="background:#F1F5F9;border:none;border-radius:50%;width:30px;height:30px;font-size:18px;cursor:pointer;color:#64748b">✕</button>'+
+      '</div>'+
+      '<div style="margin-bottom:12px">'+
+        '<label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Título do problema</label>'+
+        '<input id="mor-ch-titulo" style="width:100%;padding:12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;outline:none;box-sizing:border-box" placeholder="Ex: Vazamento na cozinha">'+
+      '</div>'+
+      '<div style="margin-bottom:12px">'+
+        '<label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Categoria</label>'+
+        '<select id="mor-ch-cat" style="width:100%;padding:12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;outline:none;background:#fff;box-sizing:border-box">'+
+        cats.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select>'+
+      '</div>'+
+      '<div style="margin-bottom:12px">'+
+        '<label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Prioridade</label>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="mor-ch-prior-wrap">'+
+          '<button type="button" data-prior="Baixa" onclick="morSelectPrior(this)" style="padding:10px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:#374151">🟢 Baixa</button>'+
+          '<button type="button" data-prior="Media" onclick="morSelectPrior(this)" style="padding:10px;border:1.5px solid #F59E0B;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;background:#FFFBEB;color:#92400E">🟡 Média</button>'+
+          '<button type="button" data-prior="Alta" onclick="morSelectPrior(this)" style="padding:10px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:#374151">🔴 Alta</button>'+
+        '</div>'+
+      '</div>'+
+      '<div style="margin-bottom:20px">'+
+        '<label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Descrição detalhada</label>'+
+        '<textarea id="mor-ch-desc" rows="4" style="width:100%;padding:12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;outline:none;resize:none;box-sizing:border-box;font-family:inherit" placeholder="Descreva o problema com detalhes..."></textarea>'+
+      '</div>'+
+      '<button onclick="morSalvarChamado()" style="width:100%;padding:14px;background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">✅ Enviar chamado</button>'+
+    '</div>';
+  document.getElementById('morador-app').appendChild(overlay);
+  setTimeout(function(){document.getElementById('mor-ch-titulo').focus();},100);
+}
+
+function morFecharModal(){var ov=document.getElementById('mor-modal-overlay');if(ov)ov.remove();}
+
+function morSelectPrior(btn){
+  var btns=document.querySelectorAll('#mor-ch-prior-wrap button');
+  btns.forEach(function(b){b.style.borderColor='#E2E8F0';b.style.background='#fff';b.style.color='#374151';});
+  btn.style.borderColor='#6366F1';btn.style.background='#EEF2FF';btn.style.color='#4F46E5';
+}
+
+function morSalvarChamado(){
+  var titulo=(document.getElementById('mor-ch-titulo')||{value:''}).value.trim();
+  if(!titulo){alert('Digite o título do chamado.');return;}
+  var prior='Media';
+  var priorBtns=document.querySelectorAll('#mor-ch-prior-wrap button');
+  priorBtns.forEach(function(b){if(b.style.borderColor==='rgb(99, 102, 241)')prior=b.getAttribute('data-prior');});
+  var mor=_moradorAtual;
+  var chams=DB.get('chamados')||[];
+  chams.push({
+    id:'ch_'+Date.now(),
+    titulo:titulo,
+    categoria:(document.getElementById('mor-ch-cat')||{value:'Outros'}).value,
+    descricao:(document.getElementById('mor-ch-desc')||{value:''}).value.trim(),
+    apto:mor.apto,moradorId:mor.id,nome:mor.nome,
+    status:'aberto',prioridade:prior,
+    data:new Date().toLocaleDateString('pt-BR'),
+    dataISO:new Date().toISOString()
   });
+  DB.set('chamados',chams);
+  var ov=document.getElementById('mor-modal-overlay');
+  if(ov)ov.remove();
+  morNavegar('chamados',null);
+  toast('✅ Chamado enviado para o síndico!');
 }
 
 function morReservar(area){
@@ -8690,6 +8773,7 @@ document.getElementById('topbar-sub').textContent=new Date().toLocaleDateString(
           </div>
           <div id="mor-clock-date" style="font-size:9px;color:rgba(255,255,255,.6);margin-top:2px;text-transform:capitalize"></div>
         </div>
+        <button onclick="solicitarPermissaoNotificacao()" id="mor-notif-btn" title="Ativar notificações" style="background:rgba(255,200,0,.25);border:1.5px solid rgba(255,200,0,.6);color:#FFD700;font-size:14px;padding:7px 10px;border-radius:20px;cursor:pointer;margin-right:4px">🔔</button>
         <button onclick="morToggleDark()" id="mor-dark-btn" title="Modo escuro" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:14px;padding:7px 10px;border-radius:20px;cursor:pointer;margin-right:4px">🌙</button>
         <button onclick="doLogoutMorador()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:20px;cursor:pointer">Sair</button>
       </div>
