@@ -7669,9 +7669,11 @@ function doLoginMorador(){
     var mor=mors.find(function(m){
       var emailOk=m.email&&m.email.toLowerCase().trim()===loginLower;
       var cpfOk=loginNumeros.length>=6&&(m.cpf||'').replace(/\D/g,'')===loginNumeros;
+      // Permitir login pelo número do apto também
+      var aptoOk=login.trim()!==''&&String(m.apto||'').trim().toLowerCase()===login.trim().toLowerCase();
       var senhaOk=(m.senha||'')===senha;
       var ativoOk=m.ativo!==false;
-      return (emailOk||cpfOk)&&senhaOk&&ativoOk;
+      return (emailOk||cpfOk||aptoOk)&&senhaOk&&ativoOk;
     });
     if(btnLogin){btnLogin.textContent='Entrar';btnLogin.disabled=false;}
     if(!mor){
@@ -7679,12 +7681,13 @@ function doLoginMorador(){
       var existe=mors.find(function(m){
         var emailOk=m.email&&m.email.toLowerCase().trim()===loginLower;
         var cpfOk=loginNumeros.length>=6&&(m.cpf||'').replace(/\D/g,'')===loginNumeros;
-        return emailOk||cpfOk;
+        var aptoOk=login.trim()!==''&&String(m.apto||'').trim().toLowerCase()===login.trim().toLowerCase();
+        return emailOk||cpfOk||aptoOk;
       });
       if(existe){
-        alert('Senha incorreta para este usuário.\n\nSe esqueceu a senha, peça ao síndico para redefinir.');
+        alert('Senha incorreta.\n\nSe esqueceu a senha, peça ao síndico para redefinir.');
       } else {
-        alert('CPF/e-mail não encontrado.\n\nVerifique se digitou corretamente ou peça ao síndico para verificar seu cadastro.');
+        alert('Usuário não encontrado.\n\nVocê pode entrar com:\n• E-mail cadastrado\n• CPF (só números)\n• Número do seu apto (ex: 16)\n\nPeça ao síndico para verificar seu cadastro.');
       }
       return;
     }
@@ -7696,6 +7699,15 @@ function doLoginMorador(){
     document.getElementById('mor-apto-display').textContent='Apto '+(mor.apto||'--');
     document.getElementById('mor-app-condo').textContent=cfg.nome||'NexCondo';
     document.getElementById('mor-unidade-display').textContent=mor.apto||'--';
+    // Recalcular débito real com base nos lançamentos
+    var pendAtual=getMoradorMovimentacoes(mor).filter(function(mv){return mv.status==='pendente';});
+    var debitoReal=pendAtual.reduce(function(s,mv){return s+Number(mv.valor||0);},0);
+    if(mor.debito!==debitoReal||mor.status!==(debitoReal>0?'inadimplente':'adimplente')){
+      mor.debito=debitoReal;
+      mor.status=debitoReal>0?'inadimplente':'adimplente';
+      saveMorador(mor);
+      _moradorAtual=mor;
+    }
     document.getElementById('mor-debito-display').textContent='R$ '+Number(mor.debito||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
     // Taxa mensal
     var taxaEl=document.getElementById('mor-taxa-display');
@@ -8738,7 +8750,7 @@ document.getElementById('topbar-sub').textContent=new Date().toLocaleDateString(
       <div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:16px">Acesse sua área</div>
       <div style="margin-bottom:12px">
         <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:5px">CPF ou E-mail</label>
-        <input id="mor-login" class="form-input" placeholder="000.000.000-00 ou email@email.com" onkeydown="if(event.key==='Enter')doLoginMorador()">
+        <input id="mor-login" class="form-input" placeholder="E-mail, CPF ou número do apto" onkeydown="if(event.key==='Enter')doLoginMorador()">
       </div>
       <div style="margin-bottom:18px">
         <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:5px">Senha</label>
