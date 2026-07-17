@@ -1059,18 +1059,32 @@ function saveMovimentacao(m){
   if(m.tipo==='receita'){
     setTimeout(function(){
       var mors=getMoradores();
-      // Encontrar morador por moradorId OU por apto
       var mor=null;
+      // 1. Por moradorId direto
       if(m.moradorId) mor=mors.find(function(x){return x.id===m.moradorId;});
+      // 2. Por apto exato
       if(!mor&&m.apto) mor=mors.find(function(x){return String(x.apto).trim()===String(m.apto).trim();});
+      // 3. Por número base do apto (ex: lançamento "16", morador "16 Ap 201")
+      if(!mor&&m.apto){
+        var aptoBase=String(m.apto).split(' ')[0].replace(/[^0-9]/g,'');
+        if(aptoBase) mor=mors.find(function(x){
+          var xBase=String(x.apto||'').split(' ')[0].replace(/[^0-9]/g,'');
+          return xBase===aptoBase;
+        });
+      }
+      // 4. Por nome no campo imovel
+      if(!mor&&m.imovel){
+        var imovelLow=String(m.imovel).toLowerCase();
+        mor=mors.find(function(x){
+          var n=(x.nome||'').toLowerCase();
+          return n.length>4&&imovelLow.indexOf(n)>=0;
+        });
+      }
       if(!mor) return;
 
-      // Recalcular débito com base em TODAS as movimentações do morador
-      var todasMovs=getMovimentacoes();
-      var pendentes=todasMovs.filter(function(mv){
-        var mesmaMor=mv.moradorId===mor.id||(mv.apto&&String(mv.apto).trim()===String(mor.apto).trim());
-        return mesmaMor&&mv.tipo==='receita'&&mv.status==='pendente';
-      });
+      // Recalcular débito usando getMoradorMovimentacoes
+      var movsAtt=getMovimentacoes();
+      var pendentes=getMoradorMovimentacoes(mor).filter(function(mv){return mv.status==='pendente';});
       var debitoTotal=pendentes.reduce(function(s,mv){return s+Number(mv.valor||0);},0);
       mor.debito=debitoTotal;
       mor.status=debitoTotal>0?'inadimplente':'adimplente';
@@ -1087,6 +1101,24 @@ function deleteMovimentacao(id,motivo){
   DB.set('movimentacoes',lista.filter(function(m){return m.id!==id;}));
   if(typeof refreshPage==='function')refreshPage();
 }
+function recalcularTodosDevedores(){
+  var mors=getMoradores();
+  var atualizados=0;
+  mors.forEach(function(mor){
+    var pend=getMoradorMovimentacoes(mor).filter(function(mv){return mv.status==='pendente';});
+    var debito=pend.reduce(function(s,mv){return s+Number(mv.valor||0);},0);
+    var status=debito>0?'inadimplente':'adimplente';
+    if(mor.debito!==debito||mor.status!==status){
+      mor.debito=debito;
+      mor.status=status;
+      atualizados++;
+    }
+  });
+  DB.set('moradores',mors);
+  toast('✅ '+mors.length+' moradores recalculados! '+(atualizados>0?atualizados+' atualizado(s).':'Nenhuma mudança.'));
+  navigate('inadimplentes');
+}
+
 function calcKpis(){
   const movs=getMovimentacoes();
   const hoje2=new Date(),mes=hoje2.getMonth(),ano=hoje2.getFullYear();
@@ -1912,7 +1944,7 @@ inadimplentes(){
     </tr>`).join(''):`<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px">✅ Nenhum inadimplente!</td></tr>`;
   return`
     <div class="card">
-      <div class="card-header"><div class="card-title">⚠️ Inadimplentes</div><div style="display:flex;gap:8px"><button class="btn-secondary" onclick="imprimirRelatorio('inadimplentes')">🖨️ Imprimir</button><button class="btn-secondary" onclick="exportarInadimplentesPDF()">📄 Exportar PDF</button><button class="btn-secondary" style="background:#25D366;color:#fff;border-color:#25D366" onclick="enviarWAInadimplentes()">💬 Cobrar via WA</button></div></div>
+      <div class="card-header"><div class="card-title">⚠️ Inadimplentes</div><div style="display:flex;gap:8px"><button class="btn-secondary" onclick="recalcularTodosDevedores()" title="Recalcular débitos de todos os moradores" style="background:#EEF2FF;color:#4F46E5;border-color:#C7D2FE">🔄 Recalcular</button><button class="btn-secondary" onclick="imprimirRelatorio('inadimplentes')">🖨️ Imprimir</button><button class="btn-secondary" onclick="exportarInadimplentesPDF()">📄 Exportar PDF</button><button class="btn-secondary" style="background:#25D366;color:#fff;border-color:#25D366" onclick="enviarWAInadimplentes()">💬 Cobrar via WA</button></div></div>
       <div class="table-wrap"><table><thead><tr><th>Morador</th><th>Débito</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
       ${inad.length?`<div style="margin-top:12px;padding:12px;background:var(--danger-bg);border-radius:8px;font-size:13px;color:var(--danger)"><strong>Total em aberto: ${fmtVal(inad.reduce((s,m)=>s+Number(m.debito||0),0))}</strong></div>`:''}
     </div>`;
