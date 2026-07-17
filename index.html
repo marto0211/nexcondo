@@ -7699,8 +7699,12 @@ function doLoginMorador(){
     document.getElementById('mor-apto-display').textContent='Apto '+(mor.apto||'--');
     document.getElementById('mor-app-condo').textContent=cfg.nome||'NexCondo';
     document.getElementById('mor-unidade-display').textContent=mor.apto||'--';
-    // Recalcular débito real com base nos lançamentos
-    var pendAtual=getMoradorMovimentacoes(mor).filter(function(mv){return mv.status==='pendente';});
+    // Recalcular débito real com dados do Supabase já carregados
+    var todasMovs=DB.get('movimentacoes')||[];
+    var pendAtual=todasMovs.filter(function(mv){
+      if(mv.status!=='pendente'||mv.tipo!=='receita') return false;
+      return (mv.moradorId&&mv.moradorId===mor.id)||(mv.apto&&String(mv.apto).trim()===String(mor.apto||'').trim());
+    });
     var debitoReal=pendAtual.reduce(function(s,mv){return s+Number(mv.valor||0);},0);
     if(mor.debito!==debitoReal||mor.status!==(debitoReal>0?'inadimplente':'adimplente')){
       mor.debito=debitoReal;
@@ -8316,7 +8320,8 @@ function morAbrirChamado(){
       '</div>'+
       '<button onclick="morSalvarChamado()" style="width:100%;padding:14px;background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">✅ Enviar chamado</button>'+
     '</div>';
-  document.getElementById('morador-app').appendChild(overlay);
+  var appEl=document.getElementById('morador-app')||document.body;
+  appEl.appendChild(overlay);
   setTimeout(function(){document.getElementById('mor-ch-titulo').focus();},100);
 }
 
@@ -8732,10 +8737,13 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});
+  window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
 }
 
-document.getElementById('topbar-sub').textContent=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+document.addEventListener('DOMContentLoaded',function(){
+  var tsEl=document.getElementById('topbar-sub');
+  if(tsEl) tsEl.textContent=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+});
 </script>
 
 <!-- ÁREA DO MORADOR - LOGIN -->
