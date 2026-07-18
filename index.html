@@ -8255,6 +8255,7 @@ function morNavegar(aba,btn){
   };
 
   if(aba==='inicio'){
+    try {
     var enc=(DB.get('encomendas')||[]).filter(function(e){return e.apto===mor.apto&&e.status!=='retirado';});
     var comuns=(DB.get('comunicados')||[]).sort(function(a,b){return(b.dataISO||b.data||'').localeCompare(a.dataISO||a.data||'');}).slice(0,3);
     var chamadosAbertos=(DB.get('chamados')||[]).filter(function(c){return (c.moradorId===mor.id||c.apto===mor.apto)&&c.status==='aberto';});
@@ -8449,6 +8450,10 @@ function morNavegar(aba,btn){
         '</div>'+
       '</div>';
 
+    } catch(e){
+      console.error('Erro na aba inicio:', e);
+      content.innerHTML='<div style="padding:32px;text-align:center"><div style="font-size:32px;margin-bottom:12px">⚠️</div><div style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:8px">Erro ao carregar</div><div style="font-size:12px;color:#64748b;margin-bottom:16px">'+e.message+'</div><button onclick="morNavegar('inicio',null)" style="padding:10px 20px;background:#4F46E5;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600">Tentar novamente</button></div>';
+    }
   } else if(aba==='financeiro'){
     content.innerHTML='<div style="padding:40px;text-align:center"><div style="font-size:28px;margin-bottom:8px">⏳</div><div style="font-size:13px;color:#94a3b8">Buscando lançamentos...</div></div>';
 
