@@ -739,11 +739,11 @@ tr:hover td { background: var(--bg); }
     <header class="topbar">
       <button class="btn-menu" onclick="toggleSidebar()">☰</button>
       <div style="flex:1;max-width:320px;margin:0 8px;position:relative">
-        <input id="busca-global" type="search" placeholder="🔍 Buscar morador, lançamento, comunicado..." 
-          style="width:100%;padding:7px 12px 7px 32px;border:1.5px solid var(--border);border-radius:20px;font-size:13px;background:var(--bg);color:var(--text);outline:none;box-sizing:border-box"
+        <input id="busca-global" type="search" placeholder="Buscar morador, lançamento, comunicado..." 
+          style="width:100%;padding:7px 12px 7px 34px;border:1.5px solid var(--border);border-radius:20px;font-size:13px;background:var(--bg);color:var(--text);outline:none;box-sizing:border-box"
           oninput="buscaGlobal(this.value)" onkeydown="if(event.key==='Escape'){this.value='';fecharBuscaGlobal()}"
           autocomplete="off">
-        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--text3);pointer-events:none">🔍</span>
+        <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--text3);pointer-events:none">🔍</span>
         <div id="busca-resultado" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:9999;max-height:380px;overflow-y:auto"></div>
       </div>
       <div class="topbar-actions">
@@ -1160,7 +1160,23 @@ function buscaGlobal(q){
       titulo:m.nome,
       sub:'Apto '+m.apto+' · '+(m.status==='adimplente'?'✅ Adimplente':'⚠️ Inadimplente'),
       cor:m.status==='adimplente'?'#10B981':'#EF4444',
-      acao:function(){navigate('moradores');setTimeout(function(){editarMorador(m.id);},300);}
+      acao:function(){
+        // Navegar para moradores e rolar até o morador encontrado
+        navigate('moradores');
+        setTimeout(function(){
+          // Destacar a linha do morador
+          var rows=document.querySelectorAll('#content tr');
+          for(var i=0;i<rows.length;i++){
+            if(rows[i].textContent.indexOf(m.nome)>=0){
+              rows[i].style.background='#EEF2FF';
+              rows[i].style.transition='background 1s';
+              rows[i].scrollIntoView({behavior:'smooth',block:'center'});
+              setTimeout(function(){rows[i].style.background='';},2500);
+              break;
+            }
+          }
+        },350);
+      }
     });
   });
 
@@ -1177,7 +1193,20 @@ function buscaGlobal(q){
       titulo:m.desc||'Sem descrição',
       sub:fmtR(m.valor)+' · '+m.data+' · '+(m.status==='pago'?'✅ Pago':'⏳ Pendente'),
       cor:m.status==='pago'?'#10B981':'#F59E0B',
-      acao:function(){navigate('financeiro');}
+      acao:function(){
+        navigate('financeiro');
+        setTimeout(function(){
+          var rows=document.querySelectorAll('#content tr');
+          for(var i=0;i<rows.length;i++){
+            if(rows[i].textContent.indexOf(m.desc||'')>=0){
+              rows[i].style.background='#FFFBEB';
+              rows[i].scrollIntoView({behavior:'smooth',block:'center'});
+              setTimeout(function(){rows[i].style.background='';},2500);
+              break;
+            }
+          }
+        },350);
+      }
     });
   });
 
@@ -7855,8 +7884,30 @@ function _entrarUnidade(idx){
   _completarLoginMorador(mor);
 }
 
+function morTrocarUnidade(){
+  var unidades=window._multiUnidades;
+  if(!unidades||unidades.length<2){
+    toast('Você possui apenas uma unidade.');
+    return;
+  }
+  // Mostrar seletor novamente sem fazer logout
+  var ma=document.getElementById('morador-app');
+  if(ma){ma.classList.add('hidden');ma.style.cssText='display:none';}
+  var ms=document.getElementById('morador-screen');
+  if(ms){
+    ms.classList.remove('hidden');
+    ms.style.cssText='display:flex!important;min-height:100vh;position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;overflow-y:auto;-webkit-overflow-scrolling:touch';
+  }
+  _selecionarUnidade(unidades);
+}
+
 function _completarLoginMorador(mor){
   _moradorAtual=mor;
+  // Mostrar botão "Trocar unidade" se tiver múltiplas unidades
+  var btnTrocar=document.getElementById('mor-trocar-btn');
+  if(btnTrocar){
+    btnTrocar.style.display=(window._multiUnidades&&window._multiUnidades.length>1)?'inline-block':'none';
+  }
   // Recalcular débito
   var pendAtual=getMoradorMovimentacoes(mor).filter(function(mv){return mv.status==='pendente';});
   var debitoReal=pendAtual.reduce(function(s,mv){return s+Number(mv.valor||0);},0);
@@ -9046,6 +9097,7 @@ document.addEventListener('DOMContentLoaded',function(){
         </div>
         <button onclick="solicitarPermissaoNotificacao()" id="mor-notif-btn" title="Ativar notificações" style="background:rgba(255,200,0,.25);border:1.5px solid rgba(255,200,0,.6);color:#FFD700;font-size:14px;padding:7px 10px;border-radius:20px;cursor:pointer;margin-right:4px">🔔</button>
         <button onclick="morToggleDark()" id="mor-dark-btn" title="Modo escuro" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:14px;padding:7px 10px;border-radius:20px;cursor:pointer;margin-right:4px">🌙</button>
+        <button id="mor-trocar-btn" onclick="morTrocarUnidade()" style="display:none;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:20px;cursor:pointer;margin-right:4px">🔄 Trocar unidade</button>
         <button onclick="doLogoutMorador()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:20px;cursor:pointer">Sair</button>
       </div>
     </div>
