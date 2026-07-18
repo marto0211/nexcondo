@@ -7913,67 +7913,45 @@ function _entrarUnidade(idx){
 function morInstalarApp(){
   var area=document.getElementById('mor-install-area');
   var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
-  var isStandalone=window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
-
-  // Já instalado
+  var isStandalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone;
   if(isStandalone){
-    if(area) area.innerHTML='<div style="background:rgba(255,255,255,.15);border-radius:10px;padding:12px;text-align:center;font-size:13px;font-weight:600;color:#fff">✅ Você já está usando como app!</div>';
+    if(area)area.innerHTML='<div style="background:rgba(255,255,255,.15);border-radius:10px;padding:12px;text-align:center;font-size:13px;font-weight:600;color:#fff">✅ Você já está usando como app!</div>';
     return;
   }
-
-  // Android/Chrome — prompt disponível, instala direto
-  if(_pwaPrompt){
-    _pwaPrompt.prompt();
-    _pwaPrompt.userChoice.then(function(result){
+  var prompt=_pwaPrompt||_pwaPromptBackup;
+  if(prompt){
+    prompt.prompt();
+    prompt.userChoice.then(function(result){
       if(result.outcome==='accepted'){
         localStorage.setItem('nexcondo_pwa_instalado','true');
-        if(area) area.innerHTML='<div style="background:rgba(255,255,255,.15);border-radius:10px;padding:12px;text-align:center;font-size:13px;font-weight:600;color:#fff">✅ Instalando... procure o ícone NexCondo na tela inicial!</div>';
+        _pwaPrompt=null;_pwaPromptBackup=null;
+        if(area)area.innerHTML='<div style="background:rgba(255,255,255,.15);border-radius:12px;padding:14px;text-align:center"><div style="font-size:24px;margin-bottom:6px">🎉</div><div style="font-size:13px;font-weight:700;color:#fff">NexCondo instalado!</div><div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:4px">Procure o ícone na tela inicial</div></div>';
         toast('✅ NexCondo instalado!');
+      } else {
+        localStorage.setItem('nexcondo_pwa_visto',Date.now().toString());
+        _pwaPrompt=null;
       }
-      _pwaPrompt=null;
     });
     return;
   }
-
-  // iPhone — instrução visual simples
   if(isIOS){
-    if(area) area.innerHTML=
-      '<div style="background:rgba(255,255,255,.12);border-radius:12px;padding:14px;color:#fff;line-height:1.7">'+
-        '<div style="font-size:13px;font-weight:700;margin-bottom:10px">Instalar no iPhone:</div>'+
-        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'+
-          '<div style="width:28px;height:28px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">1</div>'+
-          '<div style="font-size:12px">Toque em <strong>Compartilhar ⬆️</strong> no Safari</div>'+
-        '</div>'+
-        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'+
-          '<div style="width:28px;height:28px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">2</div>'+
-          '<div style="font-size:12px">Toque em <strong>"Adicionar à Tela de Início"</strong></div>'+
-        '</div>'+
-        '<div style="display:flex;align-items:center;gap:10px">'+
-          '<div style="width:28px;height:28px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">3</div>'+
-          '<div style="font-size:12px">Toque em <strong>Adicionar</strong> ✅</div>'+
-        '</div>'+
-        '<div style="margin-top:10px;font-size:11px;color:rgba(255,255,255,.55);padding:8px;background:rgba(255,255,255,.08);border-radius:8px">⚠️ Funciona apenas no Safari do iPhone</div>'+
+    if(area)area.innerHTML=
+      '<div style="background:rgba(255,255,255,.12);border-radius:12px;padding:14px;color:#fff">'+
+      '<div style="font-size:13px;font-weight:700;margin-bottom:12px;text-align:center">Instalar no iPhone</div>'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div style="width:30px;height:30px;background:#4F46E5;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">1</div><div style="font-size:12px">Toque em <strong>Compartilhar ⬆️</strong> no Safari</div></div>'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div style="width:30px;height:30px;background:#4F46E5;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">2</div><div style="font-size:12px">Toque em <strong>"Adicionar à Tela de Início"</strong></div></div>'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><div style="width:30px;height:30px;background:#10B981;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">3</div><div style="font-size:12px">Toque em <strong>Adicionar</strong> ✅</div></div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.5);text-align:center;padding:8px;background:rgba(255,255,255,.08);border-radius:8px">⚠️ Abra pelo Safari — não funciona no Chrome do iPhone</div>'+
       '</div>';
     return;
   }
-
-  // Android sem prompt — o browser já mostrou ou recusou antes
-  // Tentar via menu do browser
-  if(area) area.innerHTML=
-    '<div style="background:rgba(255,255,255,.12);border-radius:12px;padding:14px;color:#fff;line-height:1.7">'+
-      '<div style="font-size:13px;font-weight:700;margin-bottom:10px">Instalar no Android:</div>'+
-      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'+
-        '<div style="width:28px;height:28px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">1</div>'+
-        '<div style="font-size:12px">Toque nos <strong>3 pontinhos ⋮</strong> do Chrome</div>'+
-      '</div>'+
-      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'+
-        '<div style="width:28px;height:28px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">2</div>'+
-        '<div style="font-size:12px">Toque em <strong>"Adicionar à tela inicial"</strong></div>'+
-      '</div>'+
-      '<div style="display:flex;align-items:center;gap:10px">'+
-        '<div style="width:28px;height:28px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">3</div>'+
-        '<div style="font-size:12px">Toque em <strong>Adicionar</strong> ✅</div>'+
-      '</div>'+
+  if(area)area.innerHTML=
+    '<div style="background:rgba(255,255,255,.12);border-radius:12px;padding:14px;color:#fff">'+
+    '<div style="font-size:13px;font-weight:700;margin-bottom:12px;text-align:center">Instalar no Android</div>'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div style="width:30px;height:30px;background:#4F46E5;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">1</div><div style="font-size:12px">Toque nos <strong>3 pontinhos ⋮</strong> do Chrome</div></div>'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div style="width:30px;height:30px;background:#4F46E5;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">2</div><div style="font-size:12px">Toque em <strong>"Adicionar à tela inicial"</strong></div></div>'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><div style="width:30px;height:30px;background:#10B981;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">3</div><div style="font-size:12px">Toque em <strong>Adicionar</strong> ✅</div></div>'+
+    '<button onclick="window.location.reload()" style="width:100%;padding:10px;background:rgba(255,255,255,.15);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:600;cursor:pointer">🔄 Recarregar e tentar novamente</button>'+
     '</div>';
 }
 
@@ -9170,14 +9148,21 @@ if('serviceWorker' in navigator){
 // PWA — INSTALAR APP AUTOMATICAMENTE
 // ══════════════════════════════════════
 var _pwaPrompt=null;
+var _pwaPromptBackup=null; // backup para não perder o prompt
 
 // Capturar o evento de instalação (Android/Chrome)
 window.addEventListener('beforeinstallprompt',function(e){
   e.preventDefault();
   _pwaPrompt=e;
-  // Mostrar banner apenas se nunca instalou
+  _pwaPromptBackup=e; // guardar backup
+  // Mostrar banner apenas se nunca instalou e nunca recusou hoje
   if(!localStorage.getItem('nexcondo_pwa_instalado')){
-    setTimeout(_mostrarBannerInstall, 2000);
+    var visto=localStorage.getItem('nexcondo_pwa_visto');
+    var agora=Date.now();
+    // Mostrar se nunca viu ou se faz mais de 3 dias
+    if(!visto||agora-Number(visto)>3*24*60*60*1000){
+      setTimeout(_mostrarBannerInstall, 2000);
+    }
   }
 });
 
