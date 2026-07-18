@@ -1079,26 +1079,19 @@ function saveMovimentacao(m){
     setTimeout(function(){
       var mors=getMoradores();
       var mor=null;
-      // 1. Por moradorId direto
+      // 1. Por moradorId direto — ÚNICA forma segura
       if(m.moradorId) mor=mors.find(function(x){return x.id===m.moradorId;});
-      // 2. Por apto exato
+      // 2. Por apto EXATO — só se não tiver moradorId
       if(!mor&&m.apto) mor=mors.find(function(x){return String(x.apto).trim()===String(m.apto).trim();});
-      // 3. Por número base do apto (ex: lançamento "16", morador "16 Ap 201")
-      if(!mor&&m.apto){
-        var aptoBase=String(m.apto).split(' ')[0].replace(/[^0-9]/g,'');
-        if(aptoBase) mor=mors.find(function(x){
-          var xBase=String(x.apto||'').split(' ')[0].replace(/[^0-9]/g,'');
-          return xBase===aptoBase;
-        });
-      }
-      // 4. Por nome no campo imovel
+      // 3. Por nome COMPLETO no campo imovel — só como último recurso
       if(!mor&&m.imovel){
         var imovelLow=String(m.imovel).toLowerCase();
         mor=mors.find(function(x){
           var n=(x.nome||'').toLowerCase();
-          return n.length>4&&imovelLow.indexOf(n)>=0;
+          return n.length>6&&imovelLow.indexOf(n)>=0;
         });
       }
+      // REMOVIDO: busca por número base do apto (causava confusão entre aptos 16 Ap 201, 16 (202), etc.)
       if(!mor) return;
 
       // Recalcular débito usando getMoradorMovimentacoes
@@ -1122,6 +1115,29 @@ function deleteMovimentacao(id,motivo){
 }
 function recalcularTodosDevedores(){
   var mors=getMoradores();
+  var movs=getMovimentacoes();
+  var movsFixed=0;
+
+  // Passo 1: Corrigir lançamentos sem moradorId — vincular pelo campo imovel (nome completo)
+  movs.forEach(function(mv){
+    if(mv.tipo!=='receita'||mv.moradorId) return;
+    // Tentar encontrar morador pelo nome NO campo imovel
+    if(mv.imovel){
+      var imovelLow=String(mv.imovel).toLowerCase();
+      var morEncontrado=mors.find(function(m){
+        var nomeLow=(m.nome||'').toLowerCase();
+        return nomeLow.length>6&&imovelLow.indexOf(nomeLow)>=0;
+      });
+      if(morEncontrado){
+        mv.moradorId=morEncontrado.id;
+        mv.apto=String(morEncontrado.apto);
+        movsFixed++;
+      }
+    }
+  });
+  if(movsFixed>0) DB.set('movimentacoes',movs);
+
+  // Passo 2: Recalcular débito de cada morador
   var atualizados=0;
   mors.forEach(function(mor){
     var pend=getMoradorMovimentacoes(mor).filter(function(mv){return mv.status==='pendente';});
@@ -1134,7 +1150,7 @@ function recalcularTodosDevedores(){
     }
   });
   DB.set('moradores',mors);
-  toast('✅ '+mors.length+' moradores recalculados! '+(atualizados>0?atualizados+' atualizado(s).':'Nenhuma mudança.'));
+  toast('✅ Recalculado! '+atualizados+' morador(es) atualizado(s)'+(movsFixed>0?', '+movsFixed+' lançamento(s) vinculado(s)':'')+'.');
   navigate('inadimplentes');
 }
 
@@ -7889,6 +7905,43 @@ function _entrarUnidade(idx){
   _completarLoginMorador(mor);
 }
 
+function morInstalarApp(){
+  var area=document.getElementById('mor-install-area');
+  if(_pwaPrompt){
+    // Android/Chrome — instala com 1 toque
+    _pwaPrompt.prompt();
+    _pwaPrompt.userChoice.then(function(result){
+      if(result.outcome==='accepted'){
+        localStorage.setItem('nexcondo_pwa_instalado','true');
+        if(area) area.innerHTML='<div style="background:rgba(255,255,255,.15);border-radius:10px;padding:10px;text-align:center;font-size:12px;font-weight:600;color:#fff">✅ Instalando... verifique a tela inicial!</div>';
+        toast('✅ NexCondo sendo instalado!');
+      }
+      _pwaPrompt=null;
+    });
+  } else {
+    // iPhone ou já instalado — mostrar instruções
+    var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+    if(isIOS){
+      if(area) area.innerHTML=
+        '<div style="background:rgba(255,255,255,.15);border-radius:12px;padding:14px;font-size:12px;color:#fff;line-height:1.8">'+
+          '<div style="font-weight:700;margin-bottom:8px;font-size:13px">Como instalar no iPhone:</div>'+
+          '1. Toque em <strong>Compartilhar ⬆️</strong> na barra do Safari<br>'+
+          '2. Role para baixo e toque em <strong>"Adicionar à Tela de Início"</strong><br>'+
+          '3. Toque em <strong>Adicionar</strong> no canto superior direito<br>'+
+          '<div style="margin-top:8px;padding:8px;background:rgba(255,255,255,.1);border-radius:8px;font-size:11px;color:rgba(255,255,255,.7)">⚠️ Use o Safari — no Chrome do iPhone não funciona</div>'+
+        '</div>';
+    } else {
+      if(area) area.innerHTML=
+        '<div style="background:rgba(255,255,255,.15);border-radius:12px;padding:14px;font-size:12px;color:#fff;line-height:1.8">'+
+          '<div style="font-weight:700;margin-bottom:8px;font-size:13px">Como instalar:</div>'+
+          'No Chrome: toque nos <strong>3 pontinhos ⋮</strong><br>'+
+          'Selecione <strong>"Adicionar à tela inicial"</strong><br>'+
+          '<div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,.7)">Se já instalou, procure o ícone NexCondo na tela do celular.</div>'+
+        '</div>';
+    }
+  }
+}
+
 function morTrocarUnidade(){
   var unidades=window._multiUnidades;
   if(!unidades||unidades.length<2){
@@ -8483,8 +8536,39 @@ function morNavegar(aba,btn){
     var pix2=DB.get('pix')||{};
     var cfg2=getConfig();
     var taxaVal=Number(mor.taxaCustom||cfg2.taxaCondominio||cfg2.taxa||0);
+    var jaInstalado=localStorage.getItem('nexcondo_pwa_instalado')==='true';
+    var isStandalone=window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
 
     content.innerHTML=
+      // ── INSTALAR APP ──
+      (!isStandalone?
+      '<div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);border-radius:20px;padding:18px;margin-bottom:12px;color:#fff">'+
+        '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'+
+          '<div style="width:44px;height:44px;background:rgba(255,255,255,.2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">📲</div>'+
+          '<div>'+
+            '<div style="font-size:14px;font-weight:700">Instalar o app</div>'+
+            '<div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:2px">Acesse mais rápido pela tela inicial</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="background:rgba(255,255,255,.1);border-radius:12px;padding:12px;margin-bottom:12px;font-size:12px;color:rgba(255,255,255,.85);line-height:1.6">'+
+          '✅ Funciona como app de verdade<br>'+
+          '✅ Ícone na tela do celular<br>'+
+          '✅ Abre sem precisar do navegador<br>'+
+          '✅ Recebe notificações do condomínio'+
+        '</div>'+
+        (jaInstalado?
+          '<div style="background:rgba(255,255,255,.15);border-radius:10px;padding:10px;text-align:center;font-size:12px;font-weight:600">✅ App já instalado no seu dispositivo!</div>':
+          '<div id="mor-install-area">'+
+            '<button onclick="morInstalarApp()" style="width:100%;padding:13px;background:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;color:#4F46E5;cursor:pointer;margin-bottom:8px">📲 Instalar agora</button>'+
+            '<div style="text-align:center;font-size:11px;color:rgba(255,255,255,.6)">Ou: Compartilhar ⬆️ → "Adicionar à Tela de Início" (iPhone)</div>'+
+          '</div>')+
+      '</div>':
+      '<div style="background:#ECFDF5;border:2px solid #6EE7B7;border-radius:16px;padding:14px;margin-bottom:12px;text-align:center">'+
+        '<div style="font-size:20px;margin-bottom:4px">✅</div>'+
+        '<div style="font-size:13px;font-weight:700;color:#065F46">App instalado!</div>'+
+        '<div style="font-size:11px;color:#059669;margin-top:2px">Você já está usando o NexCondo como app</div>'+
+      '</div>')+
+
       // ── PREVISÃO DO TEMPO ──
       '<div style="background:linear-gradient(135deg,#0369A1,#0284C7);border-radius:20px;padding:18px;margin-bottom:12px;color:#fff">'+
         '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">🌤 Previsão do tempo</div>'+
