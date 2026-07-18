@@ -8323,6 +8323,81 @@ function morNavegar(aba,btn){
         }).join('')+
       '</div>':'';
 
+
+    // ── RESUMO FINANCEIRO VISUAL ──
+    var movsPagosAll=[];
+    var movsPendAll=[];
+    try{
+      var todasMovs=DB.get('movimentacoes')||[];
+      movsPagosAll=todasMovs.filter(function(m){
+        return m.tipo==='receita'&&m.status==='pago'&&
+          (m.moradorId===mor.id||(m.apto&&String(m.apto).trim()===String(mor.apto).trim()));
+      });
+      movsPendAll=todasMovs.filter(function(m){
+        return m.tipo==='receita'&&m.status==='pendente'&&
+          (m.moradorId===mor.id||(m.apto&&String(m.apto).trim()===String(mor.apto).trim()));
+      });
+    }catch(e){}
+    var totalPago=movsPagosAll.reduce(function(s,m){return s+Number(m.valor||0);},0);
+    var totalPend=movsPendAll.reduce(function(s,m){return s+Number(m.valor||0);},0);
+
+    // Últimos 6 meses para o gráfico
+    var mesesLabel=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    var agora2=new Date();
+    var graficoMeses=[];
+    for(var gm=5;gm>=0;gm--){
+      var gDate=new Date(agora2.getFullYear(),agora2.getMonth()-gm,1);
+      var gPago=movsPagosAll.reduce(function(s,m){
+        var d=new Date(m.dataISO||m.data);
+        return (!isNaN(d)&&d.getMonth()===gDate.getMonth()&&d.getFullYear()===gDate.getFullYear())?s+Number(m.valor||0):s;
+      },0);
+      var gPend=movsPendAll.reduce(function(s,m){
+        var d=new Date(m.dataISO||m.data);
+        return (!isNaN(d)&&d.getMonth()===gDate.getMonth()&&d.getFullYear()===gDate.getFullYear())?s+Number(m.valor||0):s;
+      },0);
+      graficoMeses.push({label:mesesLabel[gDate.getMonth()],pago:gPago,pend:gPend});
+    }
+
+    var maxVal=Math.max.apply(null,graficoMeses.map(function(g){return g.pago+g.pend||1;}));
+    var barrasHTML=graficoMeses.map(function(g){
+      var hPago=Math.round((g.pago/maxVal)*80);
+      var hPend=Math.round((g.pend/maxVal)*80);
+      return '<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1">'+
+        '<div style="width:100%;display:flex;flex-direction:column;justify-content:flex-end;height:80px;gap:2px">'+
+          (g.pend>0?'<div style="background:#FCD34D;border-radius:4px 4px 0 0;height:'+hPend+'px;min-height:4px"></div>':'')+
+          (g.pago>0?'<div style="background:#10B981;border-radius:4px 4px 0 0;height:'+hPago+'px;min-height:4px"></div>':
+          '<div style="background:#E2E8F0;border-radius:4px 4px 0 0;height:6px"></div>')+
+        '</div>'+
+        '<div style="font-size:9px;color:#94a3b8;font-weight:600">'+g.label+'</div>'+
+      '</div>';
+    }).join('');
+
+    var html_financeiro=
+      '<div style="background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:16px;margin-bottom:10px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+          '<div style="font-size:13px;font-weight:700;color:#1e293b">📊 Meu financeiro</div>'+
+          '<button onclick="morNavegar(\'financeiro\',null)" style="background:none;border:none;font-size:12px;color:#4F46E5;font-weight:600;cursor:pointer">Ver extrato →</button>'+
+        '</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">'+
+          '<div style="background:#F0FDF4;border-radius:12px;padding:12px">'+
+            '<div style="font-size:9px;color:#16A34A;font-weight:700;text-transform:uppercase;margin-bottom:4px">✅ Total pago</div>'+
+            '<div style="font-size:18px;font-weight:900;color:#15803D">'+fmtR(totalPago)+'</div>'+
+            '<div style="font-size:10px;color:#16A34A;margin-top:2px">'+movsPagosAll.length+' pagamento(s)</div>'+
+          '</div>'+
+          '<div style="background:'+(totalPend>0?'#FFFBEB':'#F0FDF4')+';border-radius:12px;padding:12px">'+
+            '<div style="font-size:9px;color:'+(totalPend>0?'#D97706':'#16A34A')+';font-weight:700;text-transform:uppercase;margin-bottom:4px">'+(totalPend>0?'⏳ Pendente':'✅ Em dia')+'</div>'+
+            '<div style="font-size:18px;font-weight:900;color:'+(totalPend>0?'#D97706':'#15803D')+'">'+fmtR(totalPend)+'</div>'+
+            '<div style="font-size:10px;color:'+(totalPend>0?'#D97706':'#16A34A')+';margin-top:2px">'+(totalPend>0?movsPendAll.length+' em aberto':'Nenhuma pendência')+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase;margin-bottom:8px">Últimos 6 meses</div>'+
+        '<div style="display:flex;gap:6px;align-items:flex-end;padding-bottom:4px">'+barrasHTML+'</div>'+
+        '<div style="display:flex;gap:12px;margin-top:10px">'+
+          '<div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;background:#10B981;border-radius:2px"></div><span style="font-size:10px;color:#64748b">Pago</span></div>'+
+          '<div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;background:#FCD34D;border-radius:2px"></div><span style="font-size:10px;color:#64748b">Pendente</span></div>'+
+        '</div>'+
+      '</div>';
+
     var html_enc=enc.length?
       '<div style="background:#FFF7ED;border:2px solid #FED7AA;border-radius:16px;padding:14px;margin-bottom:10px">'+
         '<div style="font-size:13px;font-weight:700;color:#92400E;margin-bottom:8px">📬 '+enc.length+' encomenda(s) na portaria!</div>'+
@@ -8339,7 +8414,7 @@ function morNavegar(aba,btn){
       '</div>'+
     '</div>';
 
-    content.innerHTML=html_status+badgeHTML+enqueteHTML+html_stats+html_enc+html_comuns+html_acesso;
+    content.innerHTML=html_status+badgeHTML+enqueteHTML+html_stats+html_financeiro+html_enc+html_comuns+html_acesso;
 
   } else if(aba==='financeiro'){
     content.innerHTML='<div style="padding:40px;text-align:center"><div style="font-size:28px;margin-bottom:8px">⏳</div><div style="font-size:13px;color:#94a3b8">Buscando lançamentos...</div></div>';
