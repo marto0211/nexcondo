@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#4F46E5"/>
+  <rect x="60" y="60" width="392" height="392" rx="80" fill="#6366F1"/>
+  <!-- Prédio -->
+  <rect x="156" y="180" width="200" height="220" rx="8" fill="white" opacity="0.95"/>
+  <!-- Telhado/triângulo -->
+  <polygon points="256,100 120,200 392,200" fill="white"/>
+  <!-- Porta -->
+  <rect x="216" y="310" width="80" height="90" rx="6" fill="#4F46E5"/>
+  <!-- Janelas -->
+  <rect x="176" y="220" width="50" height="50" rx="4" fill="#4F46E5" opacity="0.7"/>
+  <rect x="286" y="220" width="50" height="50" rx="4" fill="#4F46E5" opacity="0.7"/>
+  <rect x="176" y="290" width="50" height="40" rx="4" fill="#4F46E5" opacity="0.5"/>
+  <rect x="286" y="290" width="50" height="40" rx="4" fill="#4F46E5" opacity="0.5"/>
+  <!-- N de NexCondo -->
+  <text x="256" y="470" font-family="Arial,sans-serif" font-size="52" font-weight="900" fill="white" text-anchor="middle" opacity="0.9">NC</text>
+</svg>

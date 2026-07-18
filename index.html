@@ -2,11 +2,16 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
-<meta name="theme-color" content="#2d2d6e">
+<meta name="theme-color" content="#6366F1">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="NexCondo">
+<meta name="application-name" content="NexCondo">
+<meta name="description" content="Sistema de gestão condominial — Residencial Ana Silva">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
 <title>NexCondo — Gestão Condominial</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
@@ -9040,6 +9045,103 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
+}
+
+// ══════════════════════════════════════
+// PWA — INSTALAR APP AUTOMATICAMENTE
+// ══════════════════════════════════════
+var _pwaPrompt=null;
+
+// Capturar o evento de instalação (Android/Chrome)
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();
+  _pwaPrompt=e;
+  // Mostrar banner apenas se nunca instalou
+  if(!localStorage.getItem('nexcondo_pwa_instalado')){
+    setTimeout(_mostrarBannerInstall, 2000);
+  }
+});
+
+// Detectar quando foi instalado
+window.addEventListener('appinstalled',function(){
+  localStorage.setItem('nexcondo_pwa_instalado','true');
+  _fecharBannerInstall();
+  toast('✅ NexCondo instalado no seu celular!');
+});
+
+function _mostrarBannerInstall(){
+  if(document.getElementById('pwa-banner')) return;
+  var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+  var isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
+  if(isStandalone) return; // Já instalado
+
+  var banner=document.createElement('div');
+  banner.id='pwa-banner';
+  banner.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:9999;padding:0;animation:slideUp .3s ease';
+
+  if(isIOS){
+    // iPhone — instrução manual pois iOS não suporta beforeinstallprompt
+    banner.innerHTML=
+      '<div style="background:linear-gradient(135deg,#1E293B,#0F172A);color:#fff;padding:16px 20px;box-shadow:0 -4px 20px rgba(0,0,0,.3)">'+
+        '<div style="display:flex;align-items:center;gap:12px">'+
+          '<div style="width:44px;height:44px;flex-shrink:0">'+
+            '<svg viewBox="0 0 512 512" style="border-radius:10px"><rect width="512" height="512" fill="#4F46E5"/><polygon points="256,85 100,215 412,215" fill="white"/><rect x="140" y="195" width="232" height="235" rx="10" fill="white" opacity="0.96"/><rect x="208" y="318" width="96" height="112" rx="8" fill="#4F46E5"/></svg>'+
+          '</div>'+
+          '<div style="flex:1">'+
+            '<div style="font-size:14px;font-weight:700;margin-bottom:2px">Instalar NexCondo</div>'+
+            '<div style="font-size:11px;color:rgba(255,255,255,.65)">Toque em <strong>⬆️ Compartilhar</strong> → <strong>"Adicionar à Tela de Início"</strong></div>'+
+          '</div>'+
+          '<button onclick="_fecharBannerInstall()" style="background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer;padding:4px">✕</button>'+
+        '</div>'+
+      '</div>';
+  } else {
+    // Android/Chrome — instala com 1 toque
+    banner.innerHTML=
+      '<div style="background:linear-gradient(135deg,#1E293B,#0F172A);color:#fff;padding:16px 20px;box-shadow:0 -4px 20px rgba(0,0,0,.3)">'+
+        '<div style="display:flex;align-items:center;gap:12px">'+
+          '<div style="width:44px;height:44px;flex-shrink:0">'+
+            '<svg viewBox="0 0 512 512" style="border-radius:10px"><rect width="512" height="512" fill="#4F46E5"/><polygon points="256,85 100,215 412,215" fill="white"/><rect x="140" y="195" width="232" height="235" rx="10" fill="white" opacity="0.96"/><rect x="208" y="318" width="96" height="112" rx="8" fill="#4F46E5"/></svg>'+
+          '</div>'+
+          '<div style="flex:1">'+
+            '<div style="font-size:14px;font-weight:700;margin-bottom:2px">📲 Instalar NexCondo</div>'+
+            '<div style="font-size:11px;color:rgba(255,255,255,.65)">Adicione à tela inicial e acesse como app</div>'+
+          '</div>'+
+          '<div style="display:flex;gap:8px">'+
+            '<button onclick="_instalarPWA()" style="background:#6366F1;border:none;color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:20px;cursor:pointer;white-space:nowrap">Instalar</button>'+
+            '<button onclick="_fecharBannerInstall()" style="background:rgba(255,255,255,.1);border:none;color:rgba(255,255,255,.6);font-size:12px;padding:8px 10px;border-radius:20px;cursor:pointer">Agora não</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+  }
+
+  // CSS da animação
+  if(!document.getElementById('pwa-style')){
+    var st=document.createElement('style');
+    st.id='pwa-style';
+    st.textContent='@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}';
+    document.head.appendChild(st);
+  }
+  document.body.appendChild(banner);
+}
+
+function _instalarPWA(){
+  if(!_pwaPrompt) return;
+  _pwaPrompt.prompt();
+  _pwaPrompt.userChoice.then(function(result){
+    if(result.outcome==='accepted'){
+      localStorage.setItem('nexcondo_pwa_instalado','true');
+      toast('✅ Instalando NexCondo...');
+    }
+    _fecharBannerInstall();
+    _pwaPrompt=null;
+  });
+}
+
+function _fecharBannerInstall(){
+  var b=document.getElementById('pwa-banner');
+  if(b) b.remove();
+  // Não mostrar novamente por 7 dias
+  localStorage.setItem('nexcondo_pwa_visto', Date.now().toString());
 }
 
 document.addEventListener('DOMContentLoaded',function(){
