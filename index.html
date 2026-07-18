@@ -6180,13 +6180,18 @@ function navigate(page,btn){
       '</div>';
   }
   document.getElementById('content').innerHTML=html;
-  document.getElementById('page-title').textContent=TITLES[page]||page;
-  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
-  const sb=document.querySelector(`.nav-item[data-page="${page}"]`);
-  if(sb)sb.classList.add('active');
-  document.querySelectorAll('.bnav-item').forEach(el=>el.classList.remove('active'));
-  const bn=document.querySelector(`.bnav-item[data-page="${page}"]`);
-  if(bn)bn.classList.add('active');
+  var ptEl=document.getElementById('page-title');
+  if(ptEl) ptEl.textContent=TITLES[page]||page;
+  // Atualizar título da busca global como placeholder opcional
+  var bgEl=document.getElementById('busca-global');
+  if(bgEl&&!bgEl.value) bgEl.setAttribute('placeholder','Buscar em '+( TITLES[page]||page)+'...');
+  // Atualizar menu ativo
+  document.querySelectorAll('.nav-item').forEach(function(el){el.classList.remove('active');});
+  var sb=document.querySelector('.nav-item[data-page="'+page+'"]');
+  if(sb) sb.classList.add('active');
+  document.querySelectorAll('.bnav-item').forEach(function(el){el.classList.remove('active');});
+  var bn=document.querySelector('.bnav-item[data-page="'+page+'"]');
+  if(bn) bn.classList.add('active');
   if(window.innerWidth<=768)closeSidebar();
   window.scrollTo(0,0);
 }
