@@ -7912,39 +7912,69 @@ function _entrarUnidade(idx){
 
 function morInstalarApp(){
   var area=document.getElementById('mor-install-area');
+  var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+  var isStandalone=window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
+
+  // Já instalado
+  if(isStandalone){
+    if(area) area.innerHTML='<div style="background:rgba(255,255,255,.15);border-radius:10px;padding:12px;text-align:center;font-size:13px;font-weight:600;color:#fff">✅ Você já está usando como app!</div>';
+    return;
+  }
+
+  // Android/Chrome — prompt disponível, instala direto
   if(_pwaPrompt){
-    // Android/Chrome — instala com 1 toque
     _pwaPrompt.prompt();
     _pwaPrompt.userChoice.then(function(result){
       if(result.outcome==='accepted'){
         localStorage.setItem('nexcondo_pwa_instalado','true');
-        if(area) area.innerHTML='<div style="background:rgba(255,255,255,.15);border-radius:10px;padding:10px;text-align:center;font-size:12px;font-weight:600;color:#fff">✅ Instalando... verifique a tela inicial!</div>';
-        toast('✅ NexCondo sendo instalado!');
+        if(area) area.innerHTML='<div style="background:rgba(255,255,255,.15);border-radius:10px;padding:12px;text-align:center;font-size:13px;font-weight:600;color:#fff">✅ Instalando... procure o ícone NexCondo na tela inicial!</div>';
+        toast('✅ NexCondo instalado!');
       }
       _pwaPrompt=null;
     });
-  } else {
-    // iPhone ou já instalado — mostrar instruções
-    var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
-    if(isIOS){
-      if(area) area.innerHTML=
-        '<div style="background:rgba(255,255,255,.15);border-radius:12px;padding:14px;font-size:12px;color:#fff;line-height:1.8">'+
-          '<div style="font-weight:700;margin-bottom:8px;font-size:13px">Como instalar no iPhone:</div>'+
-          '1. Toque em <strong>Compartilhar ⬆️</strong> na barra do Safari<br>'+
-          '2. Role para baixo e toque em <strong>"Adicionar à Tela de Início"</strong><br>'+
-          '3. Toque em <strong>Adicionar</strong> no canto superior direito<br>'+
-          '<div style="margin-top:8px;padding:8px;background:rgba(255,255,255,.1);border-radius:8px;font-size:11px;color:rgba(255,255,255,.7)">⚠️ Use o Safari — no Chrome do iPhone não funciona</div>'+
-        '</div>';
-    } else {
-      if(area) area.innerHTML=
-        '<div style="background:rgba(255,255,255,.15);border-radius:12px;padding:14px;font-size:12px;color:#fff;line-height:1.8">'+
-          '<div style="font-weight:700;margin-bottom:8px;font-size:13px">Como instalar:</div>'+
-          'No Chrome: toque nos <strong>3 pontinhos ⋮</strong><br>'+
-          'Selecione <strong>"Adicionar à tela inicial"</strong><br>'+
-          '<div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,.7)">Se já instalou, procure o ícone NexCondo na tela do celular.</div>'+
-        '</div>';
-    }
+    return;
   }
+
+  // iPhone — instrução visual simples
+  if(isIOS){
+    if(area) area.innerHTML=
+      '<div style="background:rgba(255,255,255,.12);border-radius:12px;padding:14px;color:#fff;line-height:1.7">'+
+        '<div style="font-size:13px;font-weight:700;margin-bottom:10px">Instalar no iPhone:</div>'+
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'+
+          '<div style="width:28px;height:28px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">1</div>'+
+          '<div style="font-size:12px">Toque em <strong>Compartilhar ⬆️</strong> no Safari</div>'+
+        '</div>'+
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'+
+          '<div style="width:28px;height:28px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">2</div>'+
+          '<div style="font-size:12px">Toque em <strong>"Adicionar à Tela de Início"</strong></div>'+
+        '</div>'+
+        '<div style="display:flex;align-items:center;gap:10px">'+
+          '<div style="width:28px;height:28px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">3</div>'+
+          '<div style="font-size:12px">Toque em <strong>Adicionar</strong> ✅</div>'+
+        '</div>'+
+        '<div style="margin-top:10px;font-size:11px;color:rgba(255,255,255,.55);padding:8px;background:rgba(255,255,255,.08);border-radius:8px">⚠️ Funciona apenas no Safari do iPhone</div>'+
+      '</div>';
+    return;
+  }
+
+  // Android sem prompt — o browser já mostrou ou recusou antes
+  // Tentar via menu do browser
+  if(area) area.innerHTML=
+    '<div style="background:rgba(255,255,255,.12);border-radius:12px;padding:14px;color:#fff;line-height:1.7">'+
+      '<div style="font-size:13px;font-weight:700;margin-bottom:10px">Instalar no Android:</div>'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'+
+        '<div style="width:28px;height:28px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">1</div>'+
+        '<div style="font-size:12px">Toque nos <strong>3 pontinhos ⋮</strong> do Chrome</div>'+
+      '</div>'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'+
+        '<div style="width:28px;height:28px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">2</div>'+
+        '<div style="font-size:12px">Toque em <strong>"Adicionar à tela inicial"</strong></div>'+
+      '</div>'+
+      '<div style="display:flex;align-items:center;gap:10px">'+
+        '<div style="width:28px;height:28px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">3</div>'+
+        '<div style="font-size:12px">Toque em <strong>Adicionar</strong> ✅</div>'+
+      '</div>'+
+    '</div>';
 }
 
 function morTrocarUnidade(){
