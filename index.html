@@ -8299,21 +8299,21 @@ function morNavegar(aba,btn){
             (Number(mor.debito)>0?'<div style="font-size:18px;font-weight:900;margin-top:6px;color:#FFD740">'+fmtR(mor.debito)+'</div>':'')+
           '</div>'+
         '</div>'+
-        (pix.chave&&!isAdim?'<button onclick="morNavegar('financeiro',null)" style="width:100%;padding:11px;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-top:12px">💳 Ver débitos e pagar</button>':'')+
+        (pix.chave&&!isAdim?'<button onclick="morNavegar(\'financeiro\',null)" style="width:100%;padding:11px;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-top:12px">💳 Ver débitos e pagar</button>':'')+
       '</div>'+
       badgeHTML+
       enqueteHTML+
       // Stats rápidos
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">'+
-        '<div onclick="morNavegar('financeiro',null)" style="background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer">'+
+        '<div onclick="morNavegar(\'financeiro\',null)" style="background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer">'+
           '<div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">💰 Taxa</div>'+
           '<div style="font-size:14px;font-weight:900;color:#4F46E5">'+fmtR(taxaVal)+'</div>'+
         '</div>'+
-        '<div onclick="morNavegar('chamados',null)" style="background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer">'+
+        '<div onclick="morNavegar(\'chamados\',null)" style="background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer">'+
           '<div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">🎫 Chamados</div>'+
           '<div style="font-size:14px;font-weight:900;color:#F59E0B">'+chamadosAbertos.length+'</div>'+
         '</div>'+
-        '<div onclick="morNavegar('comunicados',null)" style="background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer">'+
+        '<div onclick="morNavegar(\'comunicados\',null)" style="background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer">'+
           '<div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">📢 Avisos</div>'+
           '<div style="font-size:14px;font-weight:900;color:#10B981">'+comuns.length+'</div>'+
         '</div>'+
@@ -8327,7 +8327,7 @@ function morNavegar(aba,btn){
       (comuns.length?'<div style="background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:14px;margin-bottom:10px">'+
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
           '<div style="font-size:13px;font-weight:700;color:#1e293b">📢 Últimos avisos</div>'+
-          '<button onclick="morNavegar('comunicados',null)" style="background:none;border:none;font-size:12px;color:#4F46E5;font-weight:600;cursor:pointer">Ver todos →</button>'+
+          '<button onclick="morNavegar(\'comunicados\',null)" style="background:none;border:none;font-size:12px;color:#4F46E5;font-weight:600;cursor:pointer">Ver todos →</button>'+
         '</div>'+
         comuns.map(function(c){
           return '<div style="padding:8px 0;border-bottom:1px solid #F8FAFC;display:flex;gap:8px;align-items:flex-start">'+
@@ -8344,7 +8344,7 @@ function morNavegar(aba,btn){
           '<button onclick="gerarComprovantePortal()" style="padding:12px;background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:12px;font-size:12px;font-weight:700;color:#15803D;cursor:pointer">📄 Comprovante</button>'+
           '<button onclick="morTrocarSenha()" style="padding:12px;background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:12px;font-size:12px;font-weight:700;color:#374151;cursor:pointer">🔑 Trocar senha</button>'+
           (cfg.telefone?'<a href="https://wa.me/55'+cfg.telefone.replace(/\D/g,'')+'" target="_blank" style="display:flex;align-items:center;justify-content:center;padding:12px;background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:12px;font-size:12px;font-weight:700;color:#15803D;text-decoration:none">💬 WhatsApp síndico</a>':
-          '<button onclick="morNavegar('utilidades',null)" style="padding:12px;background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:12px;font-size:12px;font-weight:700;color:#374151;cursor:pointer">⚙️ Mais opções</button>')+
+          '<button onclick="morNavegar(\'utilidades\',null)" style="padding:12px;background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:12px;font-size:12px;font-weight:700;color:#374151;cursor:pointer">⚙️ Mais opções</button>')+
         '</div>'+
       '</div>';
 
