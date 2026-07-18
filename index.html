@@ -8239,6 +8239,83 @@ function morNavegar(aba,btn){
     var taxaVal=Number(mor.taxaCustom||cfg.taxaCondominio||cfg.taxa||0);
     var chamAbertos=(DB.get('chamados')||[]).filter(function(c){return (c.moradorId===mor.id||c.apto===mor.apto)&&c.status==='aberto';}).length;
 
+    // ── MENSAGENS CONTEXTUAIS ──
+    var agora=new Date();
+    var hora=agora.getHours();
+    var diaSem=agora.getDay(); // 0=dom, 1=seg...6=sab
+    var primeiroNome=mor.nome.split(' ')[0];
+    var msgCtx='';
+
+    // 1. Aniversário — detecta data de nascimento
+    if(mor.nascimento){
+      var nasc=(mor.nascimento||'').split('/');
+      if(nasc.length>=2&&Number(nasc[0])===agora.getDate()&&Number(nasc[1])===agora.getMonth()+1){
+        msgCtx='<div style="background:linear-gradient(135deg,#F59E0B,#EF4444);border-radius:16px;padding:14px 16px;margin-bottom:10px;color:#fff;display:flex;align-items:center;gap:12px">'+
+          '<div style="font-size:36px">🎂</div>'+
+          '<div><div style="font-size:15px;font-weight:800">Feliz aniversário, '+primeiroNome+'!</div>'+
+          '<div style="font-size:12px;color:rgba(255,255,255,.85);margin-top:2px">O Residencial Ana Silva deseja um dia incrível! 🎉</div></div>'+
+        '</div>';
+      }
+    }
+
+    // 2. Taxa vencendo em breve
+    if(!msgCtx){
+      var movsPend2=[];
+      try{
+        var todasMovs2=DB.get('movimentacoes')||[];
+        movsPend2=todasMovs2.filter(function(m){
+          return m.tipo==='receita'&&m.status==='pendente'&&
+            (m.moradorId===mor.id||(m.apto&&String(m.apto).trim()===String(mor.apto).trim()));
+        });
+      }catch(e){}
+      if(movsPend2.length>0){
+        var proxVenc=null;
+        movsPend2.forEach(function(m){
+          var d=new Date(m.dataISO||m.data);
+          if(!isNaN(d)&&(!proxVenc||d<proxVenc)) proxVenc=d;
+        });
+        if(proxVenc){
+          var diasVenc=Math.ceil((proxVenc-agora)/(1000*60*60*24));
+          if(diasVenc<0){
+            msgCtx='<div style="background:linear-gradient(135deg,#DC2626,#EF4444);border-radius:16px;padding:14px 16px;margin-bottom:10px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px">'+
+              '<div style="display:flex;align-items:center;gap:12px">'+
+                '<div style="font-size:28px">⚠️</div>'+
+                '<div><div style="font-size:14px;font-weight:800">Taxa vencida há '+Math.abs(diasVenc)+' dia(s)!</div>'+
+                '<div style="font-size:12px;color:rgba(255,255,255,.85);margin-top:2px">Regularize para evitar multas e juros.</div></div>'+
+              '</div>'+
+              '<button onclick="morNavegar(\'financeiro\',null)" style="background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.5);color:#fff;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">Pagar agora</button>'+
+            '</div>';
+          } else if(diasVenc<=3){
+            msgCtx='<div style="background:linear-gradient(135deg,#D97706,#F59E0B);border-radius:16px;padding:14px 16px;margin-bottom:10px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px">'+
+              '<div style="display:flex;align-items:center;gap:12px">'+
+                '<div style="font-size:28px">📅</div>'+
+                '<div><div style="font-size:14px;font-weight:800">Vence em '+diasVenc+' dia(s)!</div>'+
+                '<div style="font-size:12px;color:rgba(255,255,255,.85);margin-top:2px">Sua taxa condominial está quase vencendo.</div></div>'+
+              '</div>'+
+              '<button onclick="morNavegar(\'financeiro\',null)" style="background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.5);color:#fff;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">Ver agora</button>'+
+            '</div>';
+          }
+        }
+      }
+    }
+
+    // 3. Saudação especial por dia da semana / hora
+    if(!msgCtx){
+      var saudacaoCtx='';
+      if(diaSem===1&&hora<12) saudacaoCtx='☀️ Boa semana, '+primeiroNome+'! Que seja produtiva!';
+      else if(diaSem===5&&hora>=17) saudacaoCtx='🎉 Bom fim de semana, '+primeiroNome+'!';
+      else if(diaSem===0||diaSem===6) saudacaoCtx='😎 Bom descanso, '+primeiroNome+'! Aproveite o fim de semana!';
+      else if(hora>=6&&hora<12) saudacaoCtx='☀️ Bom dia, '+primeiroNome+'! Tenha um ótimo dia!';
+      else if(hora>=12&&hora<18) saudacaoCtx='🌤 Boa tarde, '+primeiroNome+'!';
+      else if(hora>=18) saudacaoCtx='🌙 Boa noite, '+primeiroNome+'!';
+
+      if(saudacaoCtx){
+        msgCtx='<div style="background:linear-gradient(135deg,#4F46E5,#7C3AED);border-radius:16px;padding:12px 16px;margin-bottom:10px;color:#fff;display:flex;align-items:center;gap:10px">'+
+          '<div style="font-size:13px;font-weight:600">'+saudacaoCtx+'</div>'+
+        '</div>';
+      }
+    }
+
     // Badge Bom Pagador
     var movsPagos=[];
     try{ movsPagos=getMoradorMovimentacoes(mor).filter(function(m){return m.status==='pago';}); }catch(e){}
@@ -8414,7 +8491,7 @@ function morNavegar(aba,btn){
       '</div>'+
     '</div>';
 
-    content.innerHTML=html_status+badgeHTML+enqueteHTML+html_stats+html_financeiro+html_enc+html_comuns+html_acesso;
+    content.innerHTML=msgCtx+html_status+badgeHTML+enqueteHTML+html_stats+html_financeiro+html_enc+html_comuns+html_acesso;
 
   } else if(aba==='financeiro'){
     content.innerHTML='<div style="padding:40px;text-align:center"><div style="font-size:28px;margin-bottom:8px">⏳</div><div style="font-size:13px;color:#94a3b8">Buscando lançamentos...</div></div>';
