@@ -9155,14 +9155,28 @@ window.addEventListener('beforeinstallprompt',function(e){
   e.preventDefault();
   _pwaPrompt=e;
   _pwaPromptBackup=e; // guardar backup
-  // Mostrar banner apenas se nunca instalou e nunca recusou hoje
-  if(!localStorage.getItem('nexcondo_pwa_instalado')){
-    var visto=localStorage.getItem('nexcondo_pwa_visto');
-    var agora=Date.now();
-    // Mostrar se nunca viu ou se faz mais de 3 dias
-    if(!visto||agora-Number(visto)>3*24*60*60*1000){
-      setTimeout(_mostrarBannerInstall, 2000);
-    }
+  // Verificar se realmente está rodando como app instalado
+  var _rodandoComoApp=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone||document.referrer.includes('android-app://');
+  
+  if(_rodandoComoApp){
+    // Está usando como app — marcar e não mostrar banner
+    localStorage.setItem('nexcondo_pwa_instalado','true');
+    return;
+  }
+
+  // Não está rodando como app — verificar se deve mostrar banner
+  var jaInstalou=localStorage.getItem('nexcondo_pwa_instalado')==='true';
+  if(jaInstalou){
+    // Estava marcado como instalado mas não está rodando como app
+    // Provavelmente desinstalou — limpar flag e mostrar banner
+    localStorage.removeItem('nexcondo_pwa_instalado');
+  }
+
+  var visto=localStorage.getItem('nexcondo_pwa_visto');
+  var agora=Date.now();
+  // Mostrar se nunca viu ou se faz mais de 3 dias
+  if(!visto||agora-Number(visto)>3*24*60*60*1000){
+    setTimeout(_mostrarBannerInstall, 2000);
   }
 });
 
@@ -9176,8 +9190,8 @@ window.addEventListener('appinstalled',function(){
 function _mostrarBannerInstall(){
   if(document.getElementById('pwa-banner')) return;
   var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
-  var isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
-  if(isStandalone) return; // Já instalado
+  var isStandalone=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone||document.referrer.includes('android-app://');
+  if(isStandalone) return; // Já rodando como app
 
   var banner=document.createElement('div');
   banner.id='pwa-banner';
