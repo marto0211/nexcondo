@@ -1270,7 +1270,7 @@ function buscaGlobal(q){
 
   el.style.display='block';
   el.innerHTML=resultados.map(function(r,i){
-    return '<div onclick="_buscarItem('+i+')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid #F1F5F9;transition:background .1s" '+
+    return '<div onclick="_buscarItem(\'+i+\')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid #F1F5F9;transition:background .1s" '+
       'onmouseover="this.style.background=\'#F8FAFC\'" onmouseout="this.style.background=\'#fff\'">'+
       '<div style="width:36px;height:36px;border-radius:10px;background:#EEF2FF;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">'+r.tipo.split(' ')[0]+'</div>'+
       '<div style="flex:1;min-width:0">'+
@@ -2753,8 +2753,8 @@ funcionarios(){
       '<td>'+(f.salario?fmtR(f.salario):'—')+'</td>'+
       '<td>'+(f.telefone||'—')+'</td>'+
       '<td><span class="badge '+sc+'">'+(f.status||'ativo')+'</span></td>'+
-      '<td><button class="card-action" onclick="editarFuncionario(\''+f.id+'\')">✏️</button> '+
-      '<button class="card-action" style="color:var(--danger)" onclick="confirmDelete(\'Excluir '+f.nome+'?\',function(){deleteFuncionario(\''+f.id+'\');navigate(\'funcionarios\')})">🗑</button></td></tr>';
+      '<td><button class="card-action" onclick="editarFuncionario(\'\'+f.id+\'\')">✏️</button> '+
+      '<button class="card-action" style="color:var(--danger)" onclick="confirmDelete(\'Excluir \'+f.nome+\'?\',function(){deleteFuncionario(\'\'+f.id+\'\');navigate(\'funcionarios\')})">🗑</button></td></tr>';
   }).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px">Nenhum funcionário cadastrado.</td></tr>';
   return '<div class="kpi-grid" style="margin-bottom:16px">'+
     '<div class="kpi-card green"><div class="kpi-label">Ativos</div><div class="kpi-value">'+ativos.length+'</div></div>'+
@@ -2903,7 +2903,7 @@ ferias(){
 ocorrencias(){
   var list=getOcorrencias();
   var rows=list.length?list.map(function(o){
-    var imgTag=o.foto?'<img src="'+o.foto+'" style="width:36px;height:36px;border-radius:6px;object-fit:cover;cursor:pointer" onclick="verFotoOcorrencia(\''+o.id+'\')">':'<span style="color:var(--text3);font-size:11px">sem foto</span>';
+    var imgTag=o.foto?'<img src="'+o.foto+'" style="width:36px;height:36px;border-radius:6px;object-fit:cover;cursor:pointer" onclick="verFotoOcorrencia(\'\'+o.id+\'\')">':'<span style="color:var(--text3);font-size:11px">sem foto</span>';
     var sc=o.status==='resolvido'?'b-pago':o.status==='em análise'?'b-pendente':'b-atrasado';
     return '<tr><td class="td-name">'+o.titulo+'</td>'+
       '<td>'+(o.data||'—')+' '+(o.hora||'')+'</td>'+
@@ -3032,7 +3032,7 @@ despesasFixas(){
       '<div style="background:#fff8e6;border:1px solid #EF9F27;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">'+
       '<div><div style="font-size:13px;font-weight:700;color:#854F0B">⚠️ '+pendentes.length+' despesa(s) não lançada(s) em '+mesAnoLabel+'</div>'+
       '<div style="font-size:11px;color:#854F0B;margin-top:2px">Clique em "Lançar tudo" para lançar todas de uma vez no Financeiro.</div></div>'+
-      '<button class="btn-send" style="background:#EF9F27" onclick="lancaTodasDespesasFixas('+mesAtual+','+anoAtual+')">💸 Lançar tudo agora</button>'+
+      '<button class="btn-send" style="background:#EF9F27" onclick="lancaTodasDespesasFixas(\'+mesAtual+\',\'+anoAtual+\')">💸 Lançar tudo agora</button>'+
       '</div>':
       '<div style="background:#d9f2e3;border:1px solid #0F6E56;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#0F6E56;font-weight:600">✅ Todas as despesas já foram lançadas no Financeiro em '+mesAnoLabel+'.</div>')+
     '<div class="card"><div class="card-header">'+
@@ -3275,8 +3275,8 @@ portalMorador(){
       '<td>'+(saldo>0?'<span style="color:var(--danger);font-weight:600">'+fmtR(saldo)+'</span>':'<span style="color:var(--success)">Em dia</span>')+'</td>'+
       '<td>'+encsM.filter(function(e){return e.status!=='retirado';}).length+' pendente(s)</td>'+
       '<td>'+chamsM.filter(function(c){return c.status!=='concluído';}).length+' aberto(s)</td>'+
-      '<td style="display:flex;gap:6px"><button class="btn-send" style="font-size:11px;padding:5px 12px" onclick="gerarPortalMorador(\''+m.id+'\')">📱 Portal</button>'+
-      '<button class="btn-secondary" style="font-size:11px;padding:5px 12px" onclick="gerarBoletoPDF(\''+m.id+'\')">📄 Boleto</button></td>'+
+      '<td style="display:flex;gap:6px"><button class="btn-send" style="font-size:11px;padding:5px 12px" onclick="gerarPortalMorador(\'\'+m.id+\'\')">📱 Portal</button>'+
+      '<button class="btn-secondary" style="font-size:11px;padding:5px 12px" onclick="gerarBoletoPDF(\'\'+m.id+\'\')">📄 Boleto</button></td>'+
       '</tr>';
   }).join(''):'<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3)">Nenhum morador cadastrado.</td></tr>';
 
@@ -3599,10 +3599,10 @@ usuarios(){
         '<td><span style="background:'+perfil.cor+'22;color:'+perfil.cor+';font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px">'+perfil.nome+'</span></td>'+
         '<td><span style="font-size:12px;font-weight:600;color:'+(u.ativo!==false?'#22c55e':'#ef4444')+'">'+(u.ativo!==false?'✅ Ativo':'⛔ Inativo')+'</span></td>'+
         '<td><div style="display:flex;gap:6px">'+
-        '<button class="btn-secondary" style="font-size:11px;padding:5px 10px" onclick="editarUsuario(\''+u.id+'\')">✏️ Editar</button>'+
+        '<button class="btn-secondary" style="font-size:11px;padding:5px 10px" onclick="editarUsuario(\'\'+u.id+\'\')">✏️ Editar</button>'+
         (u.id!=='admin-master'?
-          '<button class="btn-secondary" style="font-size:11px;padding:5px 10px;color:'+(u.ativo!==false?'#ef4444':'#22c55e')+';border-color:'+(u.ativo!==false?'#ef4444':'#22c55e')+'" onclick="toggleUsuario(\''+u.id+'\')">'+( u.ativo!==false?'⛔ Desativar':'✅ Ativar')+'</button>'+
-          '<button class="btn-secondary" style="font-size:11px;padding:5px 10px;color:#dc2626;border-color:#fca5a5" onclick="confirmarExcluirUsuario(\''+u.id+'\',\''+u.nome.replace(/'/g,'')+'\')">🗑️ Excluir</button>':'')+
+          '<button class="btn-secondary" style="font-size:11px;padding:5px 10px;color:'+(u.ativo!==false?'#ef4444':'#22c55e')+';border-color:'+(u.ativo!==false?'#ef4444':'#22c55e')+'" onclick="toggleUsuario(\'\'+u.id+\'\')">'+( u.ativo!==false?'⛔ Desativar':'✅ Ativar')+'</button>'+
+          '<button class="btn-secondary" style="font-size:11px;padding:5px 10px;color:#dc2626;border-color:#fca5a5" onclick="confirmarExcluirUsuario(\'\'+u.id+\'\',\'\'+u.nome.replace(/\'/g,\'\')+\'\')">🗑️ Excluir</button>':'')+
         '</div></td>'+
         '</tr>';
     }).join('');
@@ -3635,8 +3635,8 @@ usuarios(){
         '<span>Permissões ativas</span><span style="font-weight:600;color:'+p.cor+'">'+qtdPerms+'/'+totalPerms+' ('+pct+'%)</span></div>'+
         '<div style="background:#f1f5f9;border-radius:4px;height:6px"><div style="width:'+pct+'%;background:'+p.cor+';height:6px;border-radius:4px"></div></div></div>'+
         '<div style="display:flex;gap:6px">'+
-        '<button class="btn-secondary" style="flex:1;font-size:11px;padding:7px" onclick="editarPerfil(\''+chave+'\')">✏️ '+(isBloqueado?'Ver/Editar permissões':'Editar perfil')+'</button>'+
-        (!isBloqueado?'<button class="btn-secondary" style="font-size:11px;padding:7px;color:#ef4444;border-color:#ef4444" onclick="excluirPerfil(\''+chave+'\')">🗑</button>':'')+
+        '<button class="btn-secondary" style="flex:1;font-size:11px;padding:7px" onclick="editarPerfil(\'\'+chave+\'\')">✏️ '+(isBloqueado?'Ver/Editar permissões':'Editar perfil')+'</button>'+
+        (!isBloqueado?'<button class="btn-secondary" style="font-size:11px;padding:7px;color:#ef4444;border-color:#ef4444" onclick="excluirPerfil(\'\'+chave+\'\')">🗑</button>':'')+
         '</div></div>';
     }).join('');
 
@@ -3951,13 +3951,13 @@ whatsapp(){
   var semTel=mors.length-comTel.length;
 
   var listaMassa=comTel.map(function(m,i){
-    return '<div id="wa-row-'+i+'" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;transition:background .15s" onclick="waSelecionarLinha('+i+')" style="cursor:pointer">'+
+    return '<div id="wa-row-'+i+'" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;transition:background .15s" onclick="waSelecionarLinha(\'+i+\')" style="cursor:pointer">'+
       '<input type="checkbox" id="wa-chk-'+i+'" data-tel="'+m.telefone+'" data-nome="'+m.nome+'" data-apto="'+m.apto+'" class="wa-chk" onchange="waAtualizarContador()" style="width:16px;height:16px;cursor:pointer;accent-color:#25D366">'+
       '<div style="flex:1">'+
         '<div style="font-size:13px;font-weight:500;color:var(--text)">'+m.nome+'</div>'+
         '<div style="font-size:11px;color:var(--text3)">Apto '+m.apto+' · '+m.telefone+'</div>'+
       '</div>'+
-      '<button onclick="event.stopPropagation();abrirWaMassa(\''+m.telefone+'\',\''+m.nome+'\',\''+m.apto+'\')" style="background:#25D366;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer">💬 Enviar</button>'+
+      '<button onclick="event.stopPropagation();abrirWaMassa(\'\'+m.telefone+\'\',\'\'+m.nome+\'\',\'\'+m.apto+\'\')" style="background:#25D366;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer">💬 Enviar</button>'+
     '</div>';
   }).join('');
 
@@ -6169,7 +6169,7 @@ function navigate(page,btn){
     if(!html){
       html='<div style="padding:40px;text-align:center;color:#94a3b8">'+
         '<div style="font-size:32px;margin-bottom:12px">⚠️</div>'+
-        '<p>A página retornou vazia. <button class="btn-send" onclick="sincronizarDoServidor().then(function(){navigate(\''+page+'\')})">🔄 Sincronizar e recarregar</button></p>'+
+        '<p>A página retornou vazia. <button class="btn-send" onclick="sincronizarDoServidor().then(function(){navigate(\'\'+page+\'\')})">🔄 Sincronizar e recarregar</button></p>'+
         '</div>';
     }
   }catch(e){
@@ -7082,7 +7082,7 @@ function _modalPerfil(chave){
   var coresHTML=cores.map(function(c){
     return '<label style="cursor:pointer;display:inline-block"><input type="radio" name="prf-cor" value="'+c+'" '+(p.cor===c?'checked':'')+' style="display:none">'+
       '<div style="width:26px;height:26px;border-radius:50%;background:'+c+';border:'+(p.cor===c?'3px solid #1e293b':'3px solid transparent')+';cursor:pointer" '+
-      'onclick="document.querySelectorAll(\'[name=prf-cor]\').forEach(function(r){r.nextElementSibling.style.borderColor=r.value===\''+c+'\'?\'#1e293b\':\'transparent\'})"></div></label>';
+      'onclick="document.querySelectorAll(\'[name=prf-cor]\').forEach(function(r){r.nextElementSibling.style.borderColor=r.value===\'\'+c+\'\'?\'#1e293b\':\'transparent\'})"></div></label>';
   }).join('');
   var permHTML=MODULOS.map(function(grupo){
     return '<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:4px">'+grupo.g+'</div>'+
@@ -7508,7 +7508,7 @@ function gerarReciboConsolidado(){
         '<div style="font-size:13px;font-weight:700;color:#D97706;margin-top:10px">Valor total: '+fmtR(total)+'</div></div>':'')+
       '<div class="footer">'+cfg.nome+' — Emitido em '+agora.toLocaleString('pt-BR')+' · NexCondo</div>'+
       '<div class="btns">'+
-        (pix.chave?'<button class="btn btn-pix" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+pix.chave+'\').then(function(){alert(\'Chave Pix copiada! Cole no seu banco e informe o valor: '+fmtR(total)+'\');})">📋 Copiar Pix</button>':'')+
+        (pix.chave?'<button class="btn btn-pix" onclick="navigator.clipboard&&navigator.clipboard.writeText(\'\'+pix.chave+\'\').then(function(){alert(\'Chave Pix copiada! Cole no seu banco e informe o valor: \'+fmtR(total)+\'\');})">📋 Copiar Pix</button>':'')+
         '<button class="btn btn-print" onclick="window.print()">🖨️ Imprimir / PDF</button>'+
       '</div>'+
     '</div></body></html>';
@@ -7850,7 +7850,7 @@ function _selecionarUnidade(unidades){
   var ms=document.getElementById('morador-screen');
   if(!ms)return;
   var opts=unidades.map(function(u,i){
-    return '<button onclick="_entrarUnidade('+i+')" style="width:100%;padding:16px;margin-bottom:10px;background:#fff;border:2px solid #E2E8F0;border-radius:14px;text-align:left;cursor:pointer;display:flex;align-items:center;gap:14px">'+
+    return '<button onclick="_entrarUnidade(\'+i+\')" style="width:100%;padding:16px;margin-bottom:10px;background:#fff;border:2px solid #E2E8F0;border-radius:14px;text-align:left;cursor:pointer;display:flex;align-items:center;gap:14px">'+
       '<div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;font-weight:700;flex-shrink:0">'+
         u.nome.charAt(0).toUpperCase()+
       '</div>'+
@@ -8236,28 +8236,15 @@ function morNavegar(aba,btn){
     var fmtR=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});};
     var pix=DB.get('pix')||{};
     var cfg=getConfig();
-    var chamadosAbertos=(DB.get('chamados')||[]).filter(function(c){return (c.moradorId===mor.id||c.apto===mor.apto)&&c.status==='aberto';});
     var taxaVal=Number(mor.taxaCustom||cfg.taxaCondominio||cfg.taxa||0);
-
-    // Confetes para adimplente
-    var confetes='';
-    if(isAdim){
-      var cores=['#6366F1','#10B981','#F59E0B','#EF4444','#8B5CF6','#3B82F6','#EC4899'];
-      for(var ci=0;ci<12;ci++){
-        var cx=Math.round(Math.random()*100);
-        var cd=Math.round(1.5+Math.random()*2.5);
-        var co=cores[ci%cores.length];
-        var cshape=ci%3===0?'border-radius:50%':ci%3===1?'':'transform:rotate(45deg)';
-        confetes+='<div style="position:absolute;left:'+cx+'%;top:-10px;width:8px;height:8px;background:'+co+';'+cshape+';animation:confete-cair '+cd+'s linear '+(Math.random().toFixed(1))+'s infinite;opacity:.8"></div>';
-      }
-    }
+    var chamAbertos=(DB.get('chamados')||[]).filter(function(c){return (c.moradorId===mor.id||c.apto===mor.apto)&&c.status==='aberto';}).length;
 
     // Badge Bom Pagador
     var movsPagos=[];
     try{ movsPagos=getMoradorMovimentacoes(mor).filter(function(m){return m.status==='pago';}); }catch(e){}
     var mesesEmDia=0;
-    for(var bm2=1;bm2<=12;bm2++){
-      var bDate=new Date(); bDate.setMonth(bDate.getMonth()-bm2);
+    for(var bm=1;bm<=12;bm++){
+      var bDate=new Date(); bDate.setMonth(bDate.getMonth()-bm);
       var temPago=movsPagos.some(function(m){
         var d=new Date(m.dataISO||m.data);
         return !isNaN(d)&&d.getMonth()===bDate.getMonth()&&d.getFullYear()===bDate.getFullYear();
@@ -8269,84 +8256,90 @@ function morNavegar(aba,btn){
       '<div style="background:linear-gradient(135deg,#F59E0B,#D97706);border-radius:14px;padding:12px 16px;margin-bottom:10px;display:flex;align-items:center;gap:10px;color:#fff">'+
         '<div style="font-size:22px">'+badgeNivel.split(' ')[0]+'</div>'+
         '<div><div style="font-size:13px;font-weight:800">Morador '+badgeNivel.split(' ')[1]+'</div>'+
-        '<div style="font-size:11px;color:rgba(255,255,255,.8);margin-top:1px">'+mesesEmDia+' meses consecutivos em dia!</div></div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.8)">'+mesesEmDia+' meses consecutivos em dia!</div></div>'+
       '</div>':'';
 
     // Enquete
     var enqueteHTML='';
     try{
-      var enquete=DB.get('enquete_ativa');
-      if(enquete&&enquete.id&&!localStorage.getItem('enquete_respondida_'+enquete.id)){
+      var enq=DB.get('enquete_ativa');
+      if(enq&&enq.id&&!localStorage.getItem('enquete_respondida_'+enq.id)){
+        var opcoesHTML=(enq.opcoes||[]).map(function(op,i){
+          return '<button onclick="responderEnquete(\''+enq.id+'\','+i+')" style="flex:1;min-width:60px;padding:9px 4px;background:#F8FAFC;border:2px solid #E2E8F0;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;color:#374151">'+op+'</button>';
+        }).join('');
         enqueteHTML='<div style="background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:16px;margin-bottom:10px">'+
-          '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:10px">🗳️ '+enquete.pergunta+'</div>'+
-          '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
-          (enquete.opcoes||[]).map(function(op,i){
-            return '<button onclick="responderEnquete(''+enquete.id+'','+i+')" style="flex:1;min-width:60px;padding:9px 4px;background:#F8FAFC;border:2px solid #E2E8F0;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;color:#374151">'+op+'</button>';
-          }).join('')+
-          '</div></div>';
+          '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:10px">🗳️ '+enq.pergunta+'</div>'+
+          '<div style="display:flex;gap:6px;flex-wrap:wrap">'+opcoesHTML+'</div></div>';
       }
     }catch(e){}
 
-    content.innerHTML=
-      // Banner status
-      '<div style="position:relative;overflow:hidden;background:'+(isAdim?'linear-gradient(135deg,#4F46E5,#7C3AED)':'linear-gradient(135deg,#DC2626,#EF4444)')+';border-radius:20px;padding:20px;margin-bottom:10px;color:#fff">'+
-        (isAdim?'<div style="position:absolute;inset:0;overflow:hidden">'+confetes+'</div>':'')+
-        '<div style="position:relative;z-index:1;display:flex;align-items:center;gap:14px">'+
-          '<div style="font-size:44px;'+(isAdim?'animation:balao-flutuar 3.5s ease-in-out infinite':'animation:triste-balancar 2.2s ease-in-out infinite')+';display:inline-block">'+(isAdim?'🎈':'😢')+'</div>'+
-          '<div>'+
-            '<div style="font-size:16px;font-weight:900;margin-bottom:2px">'+(isAdim?'Você está em dia! 🎉':'Atenção: pendência')+'</div>'+
-            '<div style="font-size:12px;color:rgba(255,255,255,.8)">'+(isAdim?'Continue assim. O condomínio agradece!':'Regularize para evitar juros e multas.')+'</div>'+
-            (Number(mor.debito)>0?'<div style="font-size:18px;font-weight:900;margin-top:6px;color:#FFD740">'+fmtR(mor.debito)+'</div>':'')+
-          '</div>'+
-        '</div>'+
-        (pix.chave&&!isAdim?'<button onclick="morNavegar(\'financeiro\',null)" style="width:100%;padding:11px;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-top:12px">💳 Ver débitos e pagar</button>':'')+
-      '</div>'+
-      badgeHTML+
-      enqueteHTML+
-      // Stats rápidos
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">'+
-        '<div onclick="morNavegar(\'financeiro\',null)" style="background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer">'+
-          '<div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">💰 Taxa</div>'+
-          '<div style="font-size:14px;font-weight:900;color:#4F46E5">'+fmtR(taxaVal)+'</div>'+
-        '</div>'+
-        '<div onclick="morNavegar(\'chamados\',null)" style="background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer">'+
-          '<div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">🎫 Chamados</div>'+
-          '<div style="font-size:14px;font-weight:900;color:#F59E0B">'+chamadosAbertos.length+'</div>'+
-        '</div>'+
-        '<div onclick="morNavegar(\'comunicados\',null)" style="background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer">'+
-          '<div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">📢 Avisos</div>'+
-          '<div style="font-size:14px;font-weight:900;color:#10B981">'+comuns.length+'</div>'+
+    // Confetes
+    var confetes='';
+    if(isAdim){
+      var cores=['#6366F1','#10B981','#F59E0B','#EF4444','#8B5CF6','#3B82F6'];
+      for(var ci=0;ci<12;ci++){
+        confetes+='<div style="position:absolute;left:'+Math.round(Math.random()*100)+'%;top:-10px;width:8px;height:8px;background:'+cores[ci%cores.length]+';border-radius:'+(ci%3===0?'50%':'0')+';animation:confete-cair '+(1.5+Math.random()*2.5).toFixed(1)+'s linear '+(Math.random().toFixed(1))+'s infinite;opacity:.8"></div>';
+      }
+    }
+
+    // Montar HTML
+    var html_status='<div style="position:relative;overflow:hidden;background:'+(isAdim?'linear-gradient(135deg,#4F46E5,#7C3AED)':'linear-gradient(135deg,#DC2626,#EF4444)')+';border-radius:20px;padding:20px;margin-bottom:10px;color:#fff">'+
+      (isAdim?'<div style="position:absolute;inset:0;overflow:hidden">'+confetes+'</div>':'')+
+      '<div style="position:relative;z-index:1;display:flex;align-items:center;gap:14px">'+
+        '<div style="font-size:44px">'+(isAdim?'🎈':'😢')+'</div>'+
+        '<div>'+
+          '<div style="font-size:16px;font-weight:900;margin-bottom:2px">'+(isAdim?'Você está em dia! 🎉':'Atenção: pendência')+'</div>'+
+          '<div style="font-size:12px;color:rgba(255,255,255,.8)">'+(isAdim?'Continue assim!':'Regularize para evitar multas.')+'</div>'+
+          (Number(mor.debito)>0?'<div style="font-size:18px;font-weight:900;margin-top:6px;color:#FFD740">'+fmtR(mor.debito)+'</div>':'')+
         '</div>'+
       '</div>'+
-      // Encomendas
-      (enc.length?'<div style="background:#FFF7ED;border:2px solid #FED7AA;border-radius:16px;padding:14px;margin-bottom:10px">'+
-        '<div style="font-size:13px;font-weight:700;color:#92400E;margin-bottom:8px">📬 '+enc.length+' encomenda(s) na portaria!</div>'+
-        enc.map(function(e){return '<div style="font-size:12px;color:#78350F;padding:4px 0">📦 '+e.descricao+' ('+e.data+')</div>';}).join('')+
-      '</div>':'')+
-      // Comunicados
-      (comuns.length?'<div style="background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:14px;margin-bottom:10px">'+
+    '</div>';
+
+    var html_stats='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">'+
+      '<div style="background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer" onclick="morNavegar(\'financeiro\',null)">'+
+        '<div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">💰 Taxa</div>'+
+        '<div style="font-size:14px;font-weight:900;color:#4F46E5">'+fmtR(taxaVal)+'</div>'+
+      '</div>'+
+      '<div style="background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer" onclick="morNavegar(\'chamados\',null)">'+
+        '<div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">🎫 Chamados</div>'+
+        '<div style="font-size:14px;font-weight:900;color:#F59E0B">'+chamAbertos+'</div>'+
+      '</div>'+
+      '<div style="background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer" onclick="morNavegar(\'comunicados\',null)">'+
+        '<div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">📢 Avisos</div>'+
+        '<div style="font-size:14px;font-weight:900;color:#10B981">'+comuns.length+'</div>'+
+      '</div>'+
+    '</div>';
+
+    var html_comuns=comuns.length?
+      '<div style="background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:14px;margin-bottom:10px">'+
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
           '<div style="font-size:13px;font-weight:700;color:#1e293b">📢 Últimos avisos</div>'+
-          '<button onclick="morNavegar(\'comunicados\',null)" style="background:none;border:none;font-size:12px;color:#4F46E5;font-weight:600;cursor:pointer">Ver todos →</button>'+
+          '<button onclick="morNavegar(\'comunicados\',null)" style="background:none;border:none;font-size:12px;color:#4F46E5;font-weight:600;cursor:pointer">Ver todos</button>'+
         '</div>'+
         comuns.map(function(c){
-          return '<div style="padding:8px 0;border-bottom:1px solid #F8FAFC;display:flex;gap:8px;align-items:flex-start">'+
-            '<div style="width:7px;height:7px;background:#4F46E5;border-radius:50%;margin-top:4px;flex-shrink:0"></div>'+
-            '<div><div style="font-size:13px;font-weight:600;color:#1e293b">'+c.titulo+'</div>'+
-            '<div style="font-size:11px;color:#94a3b8;margin-top:1px">'+c.data+'</div></div></div>';
+          return '<div style="padding:8px 0;border-bottom:1px solid #F8FAFC">'+
+            '<div style="font-size:13px;font-weight:600;color:#1e293b">'+c.titulo+'</div>'+
+            '<div style="font-size:11px;color:#94a3b8;margin-top:1px">'+c.data+'</div></div>';
         }).join('')+
-      '</div>':'')+
-      // Acesso rápido
-      '<div style="background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:14px;margin-bottom:10px">'+
-        '<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Acesso rápido</div>'+
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
-          '<button onclick="morAbrirChamado()" style="padding:12px;background:#EEF2FF;border:1.5px solid #C7D2FE;border-radius:12px;font-size:12px;font-weight:700;color:#4F46E5;cursor:pointer">🎫 Abrir chamado</button>'+
-          '<button onclick="gerarComprovantePortal()" style="padding:12px;background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:12px;font-size:12px;font-weight:700;color:#15803D;cursor:pointer">📄 Comprovante</button>'+
-          '<button onclick="morTrocarSenha()" style="padding:12px;background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:12px;font-size:12px;font-weight:700;color:#374151;cursor:pointer">🔑 Trocar senha</button>'+
-          (cfg.telefone?'<a href="https://wa.me/55'+cfg.telefone.replace(/\D/g,'')+'" target="_blank" style="display:flex;align-items:center;justify-content:center;padding:12px;background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:12px;font-size:12px;font-weight:700;color:#15803D;text-decoration:none">💬 WhatsApp síndico</a>':
-          '<button onclick="morNavegar(\'utilidades\',null)" style="padding:12px;background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:12px;font-size:12px;font-weight:700;color:#374151;cursor:pointer">⚙️ Mais opções</button>')+
-        '</div>'+
-      '</div>';
+      '</div>':'';
+
+    var html_enc=enc.length?
+      '<div style="background:#FFF7ED;border:2px solid #FED7AA;border-radius:16px;padding:14px;margin-bottom:10px">'+
+        '<div style="font-size:13px;font-weight:700;color:#92400E;margin-bottom:8px">📬 '+enc.length+' encomenda(s) na portaria!</div>'+
+        enc.map(function(e){return '<div style="font-size:12px;color:#78350F;padding:3px 0">📦 '+e.descricao+'</div>';}).join('')+
+      '</div>':'';
+
+    var html_acesso='<div style="background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:14px;margin-bottom:10px">'+
+      '<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Acesso rápido</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+        '<button onclick="morAbrirChamado()" style="padding:12px;background:#EEF2FF;border:1.5px solid #C7D2FE;border-radius:12px;font-size:12px;font-weight:700;color:#4F46E5;cursor:pointer">🎫 Abrir chamado</button>'+
+        '<button onclick="gerarComprovantePortal()" style="padding:12px;background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:12px;font-size:12px;font-weight:700;color:#15803D;cursor:pointer">📄 Comprovante</button>'+
+        '<button onclick="morTrocarSenha()" style="padding:12px;background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:12px;font-size:12px;font-weight:700;color:#374151;cursor:pointer">🔑 Trocar senha</button>'+
+        (cfg.telefone?'<a href="https://wa.me/55'+cfg.telefone.replace(/\D/g,'')+'" target="_blank" style="display:flex;align-items:center;justify-content:center;padding:12px;background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:12px;font-size:12px;font-weight:700;color:#15803D;text-decoration:none">💬 WhatsApp síndico</a>':'<button onclick="morNavegar(\'utilidades\',null)" style="padding:12px;background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:12px;font-size:12px;font-weight:700;color:#374151;cursor:pointer">⚙️ Mais</button>')+
+      '</div>'+
+    '</div>';
+
+    content.innerHTML=html_status+badgeHTML+enqueteHTML+html_stats+html_enc+html_comuns+html_acesso;
 
   } else if(aba==='financeiro'){
     content.innerHTML='<div style="padding:40px;text-align:center"><div style="font-size:28px;margin-bottom:8px">⏳</div><div style="font-size:13px;color:#94a3b8">Buscando lançamentos...</div></div>';
@@ -8396,7 +8389,7 @@ function morNavegar(aba,btn){
       var isAt=i===5;
       var lbl=m.label.charAt(0).toUpperCase()+m.label.slice(1);
       var dotCor=m.pago>0&&m.pend===0?'#4ADE80':m.pend>0?'#FCD34D':'rgba(255,255,255,.25)';
-      return '<div onclick="morSelecionarMes('+i+')" id="mormes-'+i+'" style="flex-shrink:0;width:72px;padding:10px 6px 12px;border-radius:14px;text-align:center;cursor:pointer;background:'+(isAt?'rgba(255,255,255,.18)':'rgba(255,255,255,.06)')+';border:2px solid '+(isAt?'rgba(255,255,255,.7)':'transparent')+';transition:all .2s">'+
+      return '<div onclick="morSelecionarMes(\'+i+\')" id="mormes-'+i+'" style="flex-shrink:0;width:72px;padding:10px 6px 12px;border-radius:14px;text-align:center;cursor:pointer;background:'+(isAt?'rgba(255,255,255,.18)':'rgba(255,255,255,.06)')+';border:2px solid '+(isAt?'rgba(255,255,255,.7)':'transparent')+';transition:all .2s">'+
         '<div style="font-size:11px;font-weight:'+(isAt?700:500)+';color:rgba(255,255,255,'+(isAt?'1':'.55')+');margin-bottom:8px">'+lbl+'</div>'+
         '<div style="width:9px;height:9px;border-radius:50%;background:'+dotCor+';margin:0 auto 6px"></div>'+
         '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,'+(m.total>0?(isAt?'1':'.7'):'.3')+');white-space:nowrap;overflow:hidden">'+(m.total>0?fmtR2(m.pago):'—')+'</div>'+
@@ -8580,7 +8573,7 @@ function morNavegar(aba,btn){
     content.innerHTML=card('Reservar area comum',
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'+
       areas.map(function(a){
-        return '<button onclick="morReservar(\'' +a+ '\')" style="padding:12px 8px;background:#F0F4F8;border:1.5px solid #E2E8F0;border-radius:10px;font-size:12px;font-weight:600;color:#374151;cursor:pointer">'+a+'</button>';
+        return '<button onclick="morReservar(\''+a+'\')" style="padding:12px 8px;background:#F0F4F8;border:1.5px solid #E2E8F0;border-radius:10px;font-size:11px;font-weight:600;cursor:pointer;color:#374151;flex:1">'+a+'</button>';
       }).join('')+'</div>'+
       (resMor.length?resMor.map(function(r){
         return '<div style="padding:10px;background:#F8FAFC;border-radius:8px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">'+
