@@ -8255,62 +8255,16 @@ function morNavegar(aba,btn){
   };
 
   if(aba==='inicio'){
-    try {
     var enc=(DB.get('encomendas')||[]).filter(function(e){return e.apto===mor.apto&&e.status!=='retirado';});
-    var comuns=(DB.get('comunicados')||[]).sort(function(a,b){return(b.dataISO||b.data||'').localeCompare(a.dataISO||a.data||'');}).slice(0,3);
-    var chamadosAbertos=(DB.get('chamados')||[]).filter(function(c){return (c.moradorId===mor.id||c.apto===mor.apto)&&c.status==='aberto';});
+    var comuns=(DB.get('comunicados')||[]).slice(0,3);
     var isAdim=mor.status!=='inadimplente';
-    var agora=new Date();
-    var hora=agora.getHours();
-    var diaStr=agora.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
-    var primeiroNome=mor.nome.split(' ')[0];
     var fmtR=function(n){return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2});};
     var pix=DB.get('pix')||{};
     var cfg=getConfig();
+    var chamadosAbertos=(DB.get('chamados')||[]).filter(function(c){return (c.moradorId===mor.id||c.apto===mor.apto)&&c.status==='aberto';});
+    var taxaVal=Number(mor.taxaCustom||cfg.taxaCondominio||cfg.taxa||0);
 
-    // ── MENSAGEM PERSONALIZADA POR CONTEXTO ──
-    var msgEspecial='';
-    // Aniversário
-    if(mor.nascimento){
-      var nasc=mor.nascimento.split('/');
-      if(nasc.length>=2&&Number(nasc[0])===agora.getDate()&&Number(nasc[1])===agora.getMonth()+1){
-        msgEspecial='<div style="background:linear-gradient(135deg,#F59E0B,#EF4444);border-radius:16px;padding:14px 16px;margin-bottom:10px;color:#fff;display:flex;align-items:center;gap:12px">'+
-          '<div style="font-size:32px">🎂</div>'+
-          '<div><div style="font-size:14px;font-weight:800">Feliz aniversário, '+primeiroNome+'!</div>'+
-          '<div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:2px">O condomínio deseja um ótimo dia! 🎉</div></div></div>';
-      }
-    }
-    // Dia de vencimento (vence amanhã ou hoje)
-    var movsPend=getMoradorMovimentacoes(mor).filter(function(m){return m.status==='pendente';});
-    if(!msgEspecial&&movsPend.length>0){
-      var proxVenc=movsPend.map(function(m){return new Date(m.dataISO||m.data);}).filter(function(d){return !isNaN(d);}).sort(function(a,b){return a-b;})[0];
-      if(proxVenc){
-        var diasVenc=Math.ceil((proxVenc-agora)/(1000*60*60*24));
-        if(diasVenc<=0){
-          msgEspecial='<div style="background:linear-gradient(135deg,#EF4444,#DC2626);border-radius:16px;padding:14px 16px;margin-bottom:10px;color:#fff;display:flex;align-items:center;gap:12px">'+
-            '<div style="font-size:28px">⚠️</div>'+
-            '<div><div style="font-size:13px;font-weight:800">Taxa vencida hoje!</div>'+
-            '<div style="font-size:11px;color:rgba(255,255,255,.8);margin-top:2px">Regularize para evitar multas.</div></div>'+
-            '<button onclick="morNavegar('financeiro',null)" style="margin-left:auto;background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Ver agora</button></div>';
-        } else if(diasVenc<=3){
-          msgEspecial='<div style="background:linear-gradient(135deg,#F59E0B,#D97706);border-radius:16px;padding:14px 16px;margin-bottom:10px;color:#fff;display:flex;align-items:center;gap:12px">'+
-            '<div style="font-size:28px">📅</div>'+
-            '<div><div style="font-size:13px;font-weight:800">Vence em '+diasVenc+' dia(s)!</div>'+
-            '<div style="font-size:11px;color:rgba(255,255,255,.8);margin-top:2px">Sua taxa condominial vence em breve.</div></div>'+
-            '<button onclick="morNavegar('financeiro',null)" style="margin-left:auto;background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Pagar</button></div>';
-        }
-      }
-    }
-    // Chamado respondido
-    if(!msgEspecial&&chamadosAbertos.length>0){
-      msgEspecial='<div style="background:linear-gradient(135deg,#2563EB,#1D4ED8);border-radius:16px;padding:14px 16px;margin-bottom:10px;color:#fff;display:flex;align-items:center;gap:12px">'+
-        '<div style="font-size:28px">🎫</div>'+
-        '<div><div style="font-size:13px;font-weight:800">'+chamadosAbertos.length+' chamado(s) em aberto</div>'+
-        '<div style="font-size:11px;color:rgba(255,255,255,.8);margin-top:2px">Acompanhe o status dos seus chamados.</div></div>'+
-        '<button onclick="morNavegar('chamados',null)" style="margin-left:auto;background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">Ver</button></div>';
-    }
-
-    // ── CONFETES ──
+    // Confetes para adimplente
     var confetes='';
     if(isAdim){
       var cores=['#6366F1','#10B981','#F59E0B','#EF4444','#8B5CF6','#3B82F6','#EC4899'];
@@ -8323,8 +8277,9 @@ function morNavegar(aba,btn){
       }
     }
 
-    // ── BADGE BOM PAGADOR ──
-    var movsPagos=getMoradorMovimentacoes(mor).filter(function(m){return m.status==='pago';});
+    // Badge Bom Pagador
+    var movsPagos=[];
+    try{ movsPagos=getMoradorMovimentacoes(mor).filter(function(m){return m.status==='pago';}); }catch(e){}
     var mesesEmDia=0;
     for(var bm2=1;bm2<=12;bm2++){
       var bDate=new Date(); bDate.setMonth(bDate.getMonth()-bm2);
@@ -8334,56 +8289,32 @@ function morNavegar(aba,btn){
       });
       if(temPago) mesesEmDia++; else break;
     }
-    var badgeBomPagador='';
-    if(isAdim&&mesesEmDia>=3){
-      var nivel=mesesEmDia>=12?'🏆 Morador Ouro':mesesEmDia>=6?'🥈 Morador Prata':'🥉 Morador Bronze';
-      badgeBomPagador='<div style="background:linear-gradient(135deg,#F59E0B,#D97706);border-radius:14px;padding:12px 16px;margin-bottom:10px;display:flex;align-items:center;gap:10px">'+
-        '<div style="font-size:24px">'+nivel.split(' ')[0]+'</div>'+
-        '<div>'+
-          '<div style="font-size:13px;font-weight:800;color:#fff">'+nivel.split(' ').slice(1).join(' ')+'</div>'+
-          '<div style="font-size:11px;color:rgba(255,255,255,.8);margin-top:1px">'+mesesEmDia+' meses em dia consecutivos! Parabéns!</div>'+
-        '</div>'+
-      '</div>';
-    }
+    var badgeNivel=mesesEmDia>=12?'🏆 Ouro':mesesEmDia>=6?'🥈 Prata':mesesEmDia>=3?'🥉 Bronze':'';
+    var badgeHTML=badgeNivel?
+      '<div style="background:linear-gradient(135deg,#F59E0B,#D97706);border-radius:14px;padding:12px 16px;margin-bottom:10px;display:flex;align-items:center;gap:10px;color:#fff">'+
+        '<div style="font-size:22px">'+badgeNivel.split(' ')[0]+'</div>'+
+        '<div><div style="font-size:13px;font-weight:800">Morador '+badgeNivel.split(' ')[1]+'</div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.8);margin-top:1px">'+mesesEmDia+' meses consecutivos em dia!</div></div>'+
+      '</div>':'';
 
-    // ── ENQUETE ──
-    var enquete=DB.get('enquete_ativa')||null;
+    // Enquete
     var enqueteHTML='';
-    if(enquete&&!localStorage.getItem('enquete_respondida_'+enquete.id)){
-      enqueteHTML='<div style="background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:16px;margin-bottom:12px">'+
-        '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:12px">🗳️ '+enquete.pergunta+'</div>'+
-        '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
-        enquete.opcoes.map(function(op,i){
-          return '<button onclick="responderEnquete(''+enquete.id+'','+i+')" style="flex:1;min-width:60px;padding:10px 6px;background:#F8FAFC;border:2px solid #E2E8F0;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;color:#374151">'+op+'</button>';
-        }).join('')+
-        '</div></div>';
-    }
-
-    // ── RESUMO FINANCEIRO VISUAL ──
-    var totalPagoGeral=movsPagos.reduce(function(s,m){return s+Number(m.valor||0);},0);
-    var resumoFin='<div style="background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:16px;margin-bottom:12px">'+
-      '<div style="font-size:12px;font-weight:700;color:#1e293b;margin-bottom:12px">📊 Meu histórico financeiro</div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">'+
-        '<div style="background:#F0FDF4;border-radius:10px;padding:10px;text-align:center">'+
-          '<div style="font-size:9px;color:#16A34A;font-weight:700;text-transform:uppercase;margin-bottom:3px">Total pago</div>'+
-          '<div style="font-size:14px;font-weight:900;color:#15803D">'+fmtR(totalPagoGeral)+'</div>'+
-        '</div>'+
-        '<div style="background:#EEF2FF;border-radius:10px;padding:10px;text-align:center">'+
-          '<div style="font-size:9px;color:#4F46E5;font-weight:700;text-transform:uppercase;margin-bottom:3px">Meses pagos</div>'+
-          '<div style="font-size:14px;font-weight:900;color:#4F46E5">'+mesesEmDia+'</div>'+
-        '</div>'+
-        '<div style="background:'+(movsPend.length>0?'#FEF9C3':'#F0FDF4')+';border-radius:10px;padding:10px;text-align:center">'+
-          '<div style="font-size:9px;color:'+(movsPend.length>0?'#D97706':'#16A34A')+';font-weight:700;text-transform:uppercase;margin-bottom:3px">Pendente</div>'+
-          '<div style="font-size:14px;font-weight:900;color:'+(movsPend.length>0?'#D97706':'#16A34A')+'">'+(movsPend.length>0?fmtR(movsPend.reduce(function(s,m){return s+Number(m.valor||0);},0)):'✅')+'</div>'+
-        '</div>'+
-      '</div>'+
-      '<button onclick="morNavegar('financeiro',null)" style="width:100%;padding:10px;background:#EEF2FF;border:1.5px solid #C7D2FE;border-radius:10px;font-size:12px;font-weight:700;color:#4F46E5;cursor:pointer">Ver extrato completo →</button>'+
-    '</div>';
+    try{
+      var enquete=DB.get('enquete_ativa');
+      if(enquete&&enquete.id&&!localStorage.getItem('enquete_respondida_'+enquete.id)){
+        enqueteHTML='<div style="background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:16px;margin-bottom:10px">'+
+          '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:10px">🗳️ '+enquete.pergunta+'</div>'+
+          '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+          (enquete.opcoes||[]).map(function(op,i){
+            return '<button onclick="responderEnquete(''+enquete.id+'','+i+')" style="flex:1;min-width:60px;padding:9px 4px;background:#F8FAFC;border:2px solid #E2E8F0;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;color:#374151">'+op+'</button>';
+          }).join('')+
+          '</div></div>';
+      }
+    }catch(e){}
 
     content.innerHTML=
-      msgEspecial+
       // Banner status
-      '<div style="position:relative;overflow:hidden;background:'+(isAdim?'linear-gradient(135deg,#4F46E5,#7C3AED)':'linear-gradient(135deg,#DC2626,#EF4444)')+';border-radius:20px;padding:20px;margin-bottom:12px;color:#fff">'+
+      '<div style="position:relative;overflow:hidden;background:'+(isAdim?'linear-gradient(135deg,#4F46E5,#7C3AED)':'linear-gradient(135deg,#DC2626,#EF4444)')+';border-radius:20px;padding:20px;margin-bottom:10px;color:#fff">'+
         (isAdim?'<div style="position:absolute;inset:0;overflow:hidden">'+confetes+'</div>':'')+
         '<div style="position:relative;z-index:1;display:flex;align-items:center;gap:14px">'+
           '<div style="font-size:44px;'+(isAdim?'animation:balao-flutuar 3.5s ease-in-out infinite':'animation:triste-balancar 2.2s ease-in-out infinite')+';display:inline-block">'+(isAdim?'🎈':'😢')+'</div>'+
@@ -8393,67 +8324,55 @@ function morNavegar(aba,btn){
             (Number(mor.debito)>0?'<div style="font-size:18px;font-weight:900;margin-top:6px;color:#FFD740">'+fmtR(mor.debito)+'</div>':'')+
           '</div>'+
         '</div>'+
-        (pix.chave&&!isAdim?'<button onclick="morNavegar('financeiro',null)" style="width:100%;padding:11px;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-top:12px">💳 Ver meus débitos e pagar</button>':'')+
+        (pix.chave&&!isAdim?'<button onclick="morNavegar('financeiro',null)" style="width:100%;padding:11px;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-top:12px">💳 Ver débitos e pagar</button>':'')+
       '</div>'+
-      badgeBomPagador+
+      badgeHTML+
       enqueteHTML+
       // Stats rápidos
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">'+
         '<div onclick="morNavegar('financeiro',null)" style="background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer">'+
           '<div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">💰 Taxa</div>'+
-          '<div style="font-size:15px;font-weight:900;color:#4F46E5">'+fmtR(mor.taxaCustom?Number(mor.taxaCustom):Number((cfg.taxaCondominio||0)))+'</div>'+
+          '<div style="font-size:14px;font-weight:900;color:#4F46E5">'+fmtR(taxaVal)+'</div>'+
         '</div>'+
         '<div onclick="morNavegar('chamados',null)" style="background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer">'+
           '<div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">🎫 Chamados</div>'+
-          '<div style="font-size:15px;font-weight:900;color:#F59E0B">'+chamadosAbertos.length+'</div>'+
+          '<div style="font-size:14px;font-weight:900;color:#F59E0B">'+chamadosAbertos.length+'</div>'+
         '</div>'+
         '<div onclick="morNavegar('comunicados',null)" style="background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer">'+
           '<div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">📢 Avisos</div>'+
-          '<div style="font-size:15px;font-weight:900;color:#10B981">'+comuns.length+'</div>'+
+          '<div style="font-size:14px;font-weight:900;color:#10B981">'+comuns.length+'</div>'+
         '</div>'+
       '</div>'+
-      resumoFin+
-      // Últimos comunicados
-      (comuns.length?'<div style="background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:16px;margin-bottom:12px">'+
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+      // Encomendas
+      (enc.length?'<div style="background:#FFF7ED;border:2px solid #FED7AA;border-radius:16px;padding:14px;margin-bottom:10px">'+
+        '<div style="font-size:13px;font-weight:700;color:#92400E;margin-bottom:8px">📬 '+enc.length+' encomenda(s) na portaria!</div>'+
+        enc.map(function(e){return '<div style="font-size:12px;color:#78350F;padding:4px 0">📦 '+e.descricao+' ('+e.data+')</div>';}).join('')+
+      '</div>':'')+
+      // Comunicados
+      (comuns.length?'<div style="background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:14px;margin-bottom:10px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
           '<div style="font-size:13px;font-weight:700;color:#1e293b">📢 Últimos avisos</div>'+
           '<button onclick="morNavegar('comunicados',null)" style="background:none;border:none;font-size:12px;color:#4F46E5;font-weight:600;cursor:pointer">Ver todos →</button>'+
         '</div>'+
         comuns.map(function(c){
-          return '<div style="padding:10px 0;border-bottom:1px solid #F8FAFC;display:flex;gap:10px;align-items:flex-start">'+
-            '<div style="width:8px;height:8px;background:#4F46E5;border-radius:50%;margin-top:4px;flex-shrink:0"></div>'+
+          return '<div style="padding:8px 0;border-bottom:1px solid #F8FAFC;display:flex;gap:8px;align-items:flex-start">'+
+            '<div style="width:7px;height:7px;background:#4F46E5;border-radius:50%;margin-top:4px;flex-shrink:0"></div>'+
             '<div><div style="font-size:13px;font-weight:600;color:#1e293b">'+c.titulo+'</div>'+
-            '<div style="font-size:11px;color:#94a3b8;margin-top:2px">'+c.data+'</div></div>';
-        }).join('</div>')+
-        '</div></div>':'<div style="background:#F8FAFC;border-radius:16px;padding:20px;text-align:center;margin-bottom:12px">'+
-          '<div style="font-size:28px;margin-bottom:8px">📭</div>'+
-          '<div style="font-size:13px;color:#94a3b8">Nenhum comunicado no momento</div>'+
-        '</div>')+
-      // Encomendas
-      (enc.length?'<div style="background:#FFF7ED;border:2px solid #FED7AA;border-radius:16px;padding:16px;margin-bottom:12px">'+
-        '<div style="font-size:13px;font-weight:700;color:#92400E;margin-bottom:10px">📬 '+enc.length+' encomenda(s) na portaria</div>'+
-        enc.map(function(e){
-          return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #FED7AA">'+
-            '<span style="font-size:22px">📦</span>'+
-            '<div><div style="font-size:13px;font-weight:500;color:#1e293b">'+e.descricao+'</div>'+
-            '<div style="font-size:11px;color:#D97706">'+e.data+'</div></div></div>';
+            '<div style="font-size:11px;color:#94a3b8;margin-top:1px">'+c.data+'</div></div></div>';
         }).join('')+
       '</div>':'')+
-      // Ações rápidas
-      '<div style="background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:16px;margin-bottom:12px">'+
-        '<div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">Acesso rápido</div>'+
+      // Acesso rápido
+      '<div style="background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:14px;margin-bottom:10px">'+
+        '<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Acesso rápido</div>'+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
           '<button onclick="morAbrirChamado()" style="padding:12px;background:#EEF2FF;border:1.5px solid #C7D2FE;border-radius:12px;font-size:12px;font-weight:700;color:#4F46E5;cursor:pointer">🎫 Abrir chamado</button>'+
-          '<button onclick="gerarComprovantePortal()" style="padding:12px;background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:12px;font-size:12px;font-weight:700;color:#15803D;cursor:pointer">📄 Comprovante PDF</button>'+
+          '<button onclick="gerarComprovantePortal()" style="padding:12px;background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:12px;font-size:12px;font-weight:700;color:#15803D;cursor:pointer">📄 Comprovante</button>'+
           '<button onclick="morTrocarSenha()" style="padding:12px;background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:12px;font-size:12px;font-weight:700;color:#374151;cursor:pointer">🔑 Trocar senha</button>'+
-          (cfg.telefone?'<a href="https://wa.me/55'+cfg.telefone.replace(/\D/g,'')+'" target="_blank" style="display:flex;align-items:center;justify-content:center;padding:12px;background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:12px;font-size:12px;font-weight:700;color:#15803D;text-decoration:none">💬 WhatsApp síndico</a>':'')+
+          (cfg.telefone?'<a href="https://wa.me/55'+cfg.telefone.replace(/\D/g,'')+'" target="_blank" style="display:flex;align-items:center;justify-content:center;padding:12px;background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:12px;font-size:12px;font-weight:700;color:#15803D;text-decoration:none">💬 WhatsApp síndico</a>':
+          '<button onclick="morNavegar('utilidades',null)" style="padding:12px;background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:12px;font-size:12px;font-weight:700;color:#374151;cursor:pointer">⚙️ Mais opções</button>')+
         '</div>'+
       '</div>';
 
-    } catch(e){
-      console.error('Erro na aba inicio:', e);
-      content.innerHTML='<div style="padding:32px;text-align:center"><div style="font-size:32px;margin-bottom:12px">⚠️</div><div style="font-size:14px;font-weight:700;color:#1e293b;margin-bottom:8px">Erro ao carregar</div><div style="font-size:12px;color:#64748b;margin-bottom:16px">'+e.message+'</div><button onclick="morNavegar('inicio',null)" style="padding:10px 20px;background:#4F46E5;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600">Tentar novamente</button></div>';
-    }
   } else if(aba==='financeiro'){
     content.innerHTML='<div style="padding:40px;text-align:center"><div style="font-size:28px;margin-bottom:8px">⏳</div><div style="font-size:13px;color:#94a3b8">Buscando lançamentos...</div></div>';
 
